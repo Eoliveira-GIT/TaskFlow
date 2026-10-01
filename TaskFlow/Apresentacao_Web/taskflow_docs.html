@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Arquitetura & Documentação Fase 1</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --accent: #4F46E5;
+    --accent-light: #EEF2FF;
+    --bg: #F9FAFB;
+    --surface: #FFFFFF;
+    --border: #E5E7EB;
+    --text-main: #111827;
+    --text-muted: #6B7280;
+    --text-xs: #9CA3AF;
+    --success: #059669;
+    --danger: #DC2626;
+    --warn: #D97706;
+    --info: #2563EB;
+    --purple: #7C3AED;
+    --green: #059669;
+    --sidebar-w: 240px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text-main);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ──────────────────── TOP BAR ──────────────────── */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 24px; gap: 14px;
+  }
+  .topbar-logo {
+    display: flex; align-items: center; gap: 9px; text-decoration: none;
+  }
+  .logo-badge {
+    width: 28px; height: 28px; background: var(--accent); border-radius: 7px;
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 12px;
+    flex-shrink: 0;
+  }
+  .logo-name { font-weight: 700; font-size: 15px; color: var(--text-main); }
+  .logo-sep { color: var(--border); font-size: 20px; margin: 0 4px; }
+  .logo-sub { font-size: 13px; color: var(--text-muted); font-weight: 400; }
+
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .topbar-chip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 6px;
+    border: 1px solid var(--border); font-size: 11px;
+    font-weight: 600; color: var(--text-muted); background: var(--surface);
+    cursor: pointer; transition: all .15s;
+  }
+  .topbar-chip:hover { background: var(--bg); color: var(--text-main); }
+  .topbar-chip.highlight { background: var(--accent-light); color: var(--accent); border-color: #C7D2FE; }
+  .topbar-chip svg { width: 12px; height: 12px; }
+  .topbar-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+  /* ──────────────────── LAYOUT ──────────────────── */
+  .layout {
+    display: flex;
+    padding-top: 52px;
+    min-height: 100vh;
+  }
+
+  /* ──────────────────── SIDEBAR NAV ──────────────────── */
+  .sidenav {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky; top: 52px;
+    height: calc(100vh - 52px);
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .sidenav-group { margin-bottom: 24px; }
+  .sidenav-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--text-xs); padding: 0 18px; margin-bottom: 6px;
+  }
+  .sidenav-link {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 18px; font-size: 12.5px; font-weight: 500;
+    color: var(--text-muted); cursor: pointer; transition: all .12s;
+    border-left: 2px solid transparent; text-decoration: none;
+  }
+  .sidenav-link:hover { color: var(--text-main); background: var(--bg); }
+  .sidenav-link.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); font-weight: 600; }
+  .sidenav-link svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .sidenav-badge {
+    margin-left: auto; font-size: 9px; font-weight: 700;
+    padding: 1px 5px; border-radius: 4px;
+  }
+  .badge-green { background: #DCFCE7; color: #15803D; }
+  .badge-blue  { background: #DBEAFE; color: #1D4ED8; }
+  .badge-gray  { background: var(--bg); color: var(--text-muted); }
+
+  /* ──────────────────── CONTENT ──────────────────── */
+  .content { flex: 1; max-width: 860px; padding: 40px 40px 80px; }
+
+  .page-header { margin-bottom: 32px; }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-xs); margin-bottom: 10px;
+  }
+  .breadcrumb span { color: var(--text-muted); }
+  .page-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+  .page-subtitle { color: var(--text-muted); font-size: 13.5px; max-width: 560px; }
+
+  .page-meta {
+    display: flex; align-items: center; gap: 14px; margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .meta-pill {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .meta-pill svg { width: 12px; height: 12px; color: var(--text-xs); }
+
+  /* ──────────────────── DIVIDER ──────────────────── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ──────────────────── SECTION ──────────────────── */
+  .section { margin-bottom: 40px; scroll-margin-top: 70px; }
+  .section-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 3px; height: 18px; background: var(--accent); border-radius: 2px; flex-shrink: 0;
+  }
+  .section-desc { color: var(--text-muted); margin-bottom: 16px; font-size: 13px; }
+
+  /* ──────────────────── STATS ROW ──────────────────── */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; transition: box-shadow .15s;
+  }
+  .stat-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+  .stat-num { font-size: 26px; font-weight: 700; color: var(--text-main); }
+  .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .stat-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; margin-bottom: 8px; }
+  .si-purple { background: #EDE9FE; color: #7C3AED; }
+  .si-blue   { background: #DBEAFE; color: #2563EB; }
+  .si-green  { background: #DCFCE7; color: #15803D; }
+  .si-orange { background: #FFEDD5; color: #C2410C; }
+  .stat-icon svg { width: 16px; height: 16px; }
+
+  /* ──────────────────── CODE BLOCK ──────────────────── */
+  .code-block {
+    background: #1F2937; color: #E5E7EB;
+    border-radius: 10px; overflow: hidden;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; line-height: 1.7;
+    margin-bottom: 16px;
+    border: 1px solid #374151;
+  }
+  .code-header {
+    background: #111827; padding: 8px 16px;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid #374151;
+  }
+  .code-dots { display: flex; gap: 5px; }
+  .code-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .code-lang { margin-left: auto; font-size: 10px; color: #6B7280; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  .code-body { padding: 16px 20px; overflow-x: auto; }
+  .code-body .c-dir  { color: #60A5FA; font-weight: 500; }
+  .code-body .c-file { color: #A3E635; }
+  .code-body .c-cs   { color: #34D399; }
+  .code-body .c-gray { color: #9CA3AF; }
+  .code-body .c-acc  { color: #FBBF24; }
+
+  /* ──────────────────── CHECKLIST TABLE ──────────────────── */
+  .check-table { width: 100%; border-collapse: collapse; }
+  .check-table th, .check-table td {
+    padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid var(--border); font-size: 12.5px;
+  }
+  .check-table th {
+    background: var(--bg); font-weight: 600; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--text-xs);
+  }
+  .check-table tr:last-child td { border-bottom: none; }
+  .check-table tr:hover td { background: #FAFAFA; }
+  .check-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px;
+  }
+  .cs-done   { background: #DCFCE7; color: #15803D; }
+  .cs-pend   { background: #FEF3C7; color: #92400E; }
+  .cs-block  { background: #FEE2E2; color: #991B1B; }
+
+  /* ──────────────────── PERSON CARD ──────────────────── */
+  .person-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .person-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px;
+    transition: box-shadow .15s;
+  }
+  .person-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+  .person-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .person-av {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .person-name { font-size: 14px; font-weight: 700; }
+  .person-role { font-size: 11px; color: var(--text-muted); }
+  .person-scope { margin-bottom: 12px; font-size: 12px; color: var(--text-muted); }
+  .person-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .ptag {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    background: var(--bg); color: var(--text-muted); border: 1px solid var(--border);
+  }
+
+  /* ──────────────────── CALLOUT ──────────────────── */
+  .callout {
+    border-left: 3px solid; border-radius: 0 8px 8px 0;
+    padding: 12px 16px; margin-bottom: 14px; font-size: 12.5px;
+  }
+  .callout-info  { border-color: var(--info);    background: #EFF6FF; color: #1E40AF; }
+  .callout-warn  { border-color: var(--warn);    background: #FFFBEB; color: #78350F; }
+  .callout-done  { border-color: var(--success); background: #F0FDF4; color: #14532D; }
+  .callout strong { font-weight: 700; }
+
+  /* ──────────────────── FLOW STEPS ──────────────────── */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow-step {
+    display: flex; gap: 16px; position: relative;
+  }
+  .flow-step::before {
+    content: ''; position: absolute; left: 17px; top: 36px; bottom: -20px;
+    width: 1px; background: var(--border);
+  }
+  .flow-step:last-child::before { display: none; }
+  .flow-num {
+    width: 35px; height: 35px; border-radius: 8px; background: var(--surface);
+    border: 1.5px solid var(--border); display: grid; place-items: center;
+    font-size: 13px; font-weight: 700; color: var(--accent); flex-shrink: 0;
+    position: relative; z-index: 1; align-self: flex-start; margin-top: 4px;
+  }
+  .flow-body { flex: 1; padding-bottom: 24px; }
+  .flow-title { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
+  .flow-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+  .flow-file { display: inline-block; margin-top: 5px; font-family: 'JetBrains Mono', monospace; font-size: 11px; background: var(--bg); border: 1px solid var(--border); padding: 2px 7px; border-radius: 4px; color: var(--accent); }
+
+  /* ──────────────────── RIGHT TOC ──────────────────── */
+  .toc {
+    width: 200px; min-width: 200px;
+    position: sticky; top: 72px;
+    align-self: flex-start;
+    padding: 24px 0 24px 24px;
+    font-size: 11.5px;
+    display: none;
+  }
+  @media(min-width:1200px) { .toc { display: block; } }
+  .toc-title { font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-xs); margin-bottom: 10px; }
+  .toc-item {
+    display: block; padding: 4px 0; color: var(--text-muted);
+    text-decoration: none; transition: color .12s;
+  }
+  .toc-item:hover { color: var(--text-main); }
+  .toc-item.active { color: var(--accent); font-weight: 600; }
+
+  /* ──────────────────── SCROLLBAR ──────────────────── */
+  .sidenav::-webkit-scrollbar { width: 3px; }
+  .sidenav::-webkit-scrollbar-thumb { background: var(--border); }
+
+  /* ──────────────────── RESPONSIVE ──────────────────── */
+  @media(max-width:768px) {
+    .sidenav { display: none; }
+    .person-grid { grid-template-columns: 1fr; }
+    .content { padding: 24px 16px 60px; }
+    .stats-row { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ TOPBAR ══════════════════════════════════════════════ -->
+<div class="topbar">
+  <a class="topbar-logo" href="taskflow_app.html">
+    <div class="logo-badge">TF</div>
+    <span class="logo-name">TaskFlow</span>
+  </a>
+  <span class="logo-sep">|</span>
+  <span class="logo-sub">Documentação & Arquitetura · Fase 1</span>
+
+  <div class="topbar-right">
+    <div class="topbar-chip">
+      <div class="topbar-dot"></div>
+      Build: OK
+    </div>
+    <div class="topbar-chip">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+      .NET 8.0
+    </div>
+    <a href="taskflow_app.html" class="topbar-chip highlight">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="20" rx="1"/><rect x="14" y="2" width="8" height="14" rx="1"/></svg>
+      Abrir App Kanban
+    </a>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ LAYOUT ══════════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- SIDENAV -->
+  <nav class="sidenav">
+    <div class="sidenav-group">
+      <div class="sidenav-title">Navegação</div>
+      <a href="#visao-geral" class="sidenav-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Visão Geral
+      </a>
+      <a href="#equipe" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Equipe
+      </a>
+      <a href="#arquitetura" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        Arquitetura
+      </a>
+      <a href="#fluxo" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Fluxo de Navegação
+      </a>
+    </div>
+
+    <div class="sidenav-group">
+      <div class="sidenav-title">Checklist</div>
+      <a href="#etapa-1-1" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Etapa 1.1 — Arquitetura
+        <span class="sidenav-badge badge-green">OK</span>
+      </a>
+      <a href="#etapa-1-2" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Etapa 1.2 — Menu UX
+        <span class="sidenav-badge badge-green">OK</span>
+      </a>
+      <a href="#etapa-1-3" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Etapa 1.3 — Views
+        <span class="sidenav-badge badge-green">OK</span>
+      </a>
+      <a href="#etapa-1-4" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Etapa 1.4 — Contratos
+        <span class="sidenav-badge badge-green">OK</span>
+      </a>
+    </div>
+
+    <div class="sidenav-group">
+      <div class="sidenav-title">Execução</div>
+      <a href="#como-executar" class="sidenav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Como Executar
+      </a>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- ── HEADER ── -->
+    <div class="page-header" id="visao-geral">
+      <div class="breadcrumb">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        <span>TaskFlow</span>
+        <span>›</span>
+        <span>Fase 1</span>
+        <span>›</span>
+        <span style="color:var(--text-main); font-weight:500;">Documentação</span>
+      </div>
+
+      <h1 class="page-title">Fase 1 — Arquitetura & Documentação</h1>
+      <p class="page-subtitle">Registro técnico completo das entregas da Fase 1, responsabilidade da Pessoa B: estrutura de pastas, menu, views e contratos de integração com o backend.</p>
+
+      <div class="page-meta">
+        <div class="meta-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+          Fase 1 — Setembro/2026
+        </div>
+        <div class="meta-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          .NET 8.0 · C# Console App
+        </div>
+        <div class="meta-pill">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Build OK · 0 erros · 0 warnings
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon si-purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+        </div>
+        <div class="stat-num">4</div>
+        <div class="stat-label">Pastas Criadas</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <div class="stat-num">6</div>
+        <div class="stat-label">Arquivos C#</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="20" rx="1"/><rect x="14" y="2" width="8" height="14" rx="1"/></svg>
+        </div>
+        <div class="stat-num">4</div>
+        <div class="stat-label">Views (Telas)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon si-orange">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div class="stat-num">1</div>
+        <div class="stat-label">Interface de Serviço</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ── EQUIPE ── -->
+    <section class="section" id="equipe">
+      <div class="section-title">Divisão de Responsabilidades</div>
+      <p class="section-desc">O projeto TaskFlow está dividido entre duas pessoas com escopo bem definido para evitar conflitos de código.</p>
+
+      <div class="person-grid">
+        <div class="person-card">
+          <div class="person-header">
+            <div class="person-av" style="background:#6366F1">PA</div>
+            <div>
+              <div class="person-name">Pessoa A</div>
+              <div class="person-role">Backend · Core · Estruturas de Dados</div>
+            </div>
+          </div>
+          <div class="person-scope">Responsável pelo projeto <strong>TaskFlow.Domain</strong>: implementação das estruturas de dados (Grafo, FilaPrioridade, PilhaUndo) e regras de negócio.</div>
+          <div class="person-tags">
+            <span class="ptag">GrafoDependencias</span>
+            <span class="ptag">FilaPrioridade</span>
+            <span class="ptag">PilhaUndo</span>
+            <span class="ptag">Entidades de Domínio</span>
+          </div>
+        </div>
+
+        <div class="person-card" style="border-color:#C7D2FE;">
+          <div class="person-header">
+            <div class="person-av" style="background:#EC4899">PB</div>
+            <div>
+              <div class="person-name">Pessoa B</div>
+              <div class="person-role">Interface · UI/UX · Navegação · Integração</div>
+            </div>
+          </div>
+          <div class="person-scope">Responsável pelo projeto <strong>TaskFlow.App</strong>: telas do sistema (Views), loop de navegação, mock services e contratos de integração com o backend da Pessoa A.</div>
+          <div class="person-tags">
+            <span class="ptag" style="background:#EEF2FF; color:#4338CA; border-color:#C7D2FE;">MenuNavigator</span>
+            <span class="ptag" style="background:#EEF2FF; color:#4338CA; border-color:#C7D2FE;">Views</span>
+            <span class="ptag" style="background:#EEF2FF; color:#4338CA; border-color:#C7D2FE;">MockServices</span>
+            <span class="ptag" style="background:#EEF2FF; color:#4338CA; border-color:#C7D2FE;">ITaskFlowService</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── ARQUITETURA ── -->
+    <section class="section" id="arquitetura">
+      <div class="section-title">Estrutura de Pastas</div>
+      <p class="section-desc">Organização modular do projeto TaskFlow.App, seguindo separação de responsabilidades (SRP) e princípio de inversão de dependência (DIP).</p>
+
+      <div class="code-block">
+        <div class="code-header">
+          <div class="code-dots">
+            <div class="code-dot" style="background:#EF4444"></div>
+            <div class="code-dot" style="background:#F59E0B"></div>
+            <div class="code-dot" style="background:#10B981"></div>
+          </div>
+          <span class="code-lang">Estrutura de Pastas</span>
+        </div>
+        <div class="code-body"><pre>
+<span class="c-file">TaskFlow.sln</span>
+│
+├── <span class="c-dir">TaskFlow.Domain/</span>          <span class="c-gray">← Pessoa A (Backend/Core)</span>
+│   └── <span class="c-gray">... GrafoDependencias, FilaPrioridade, PilhaUndo</span>
+│
+└── <span class="c-dir">TaskFlow.App/</span>             <span class="c-acc">← Pessoa B (UI/Interface) ✓ Fase 1</span>
+    ├── <span class="c-file">Program.cs</span>               <span class="c-gray">← Ponto de entrada (Main)</span>
+    ├── <span class="c-file">TaskFlow.App.csproj</span>
+    │
+    ├── <span class="c-dir">Services/</span>
+    │   └── <span class="c-cs">ITaskFlowService.cs</span>   <span class="c-gray">← Contrato de integração (interface)</span>
+    │
+    ├── <span class="c-dir">Navigation/</span>
+    │   └── <span class="c-cs">MenuNavigator.cs</span>      <span class="c-gray">← Loop principal + roteamento de telas</span>
+    │
+    ├── <span class="c-dir">Views/</span>
+    │   ├── <span class="c-cs">DashboardView.cs</span>      <span class="c-gray">← Resumo financeiro + tarefas urgentes</span>
+    │   ├── <span class="c-cs">KanbanView.cs</span>         <span class="c-gray">← Colunas: A Fazer / Em Andamento / Concluída</span>
+    │   ├── <span class="c-cs">FinanceiroView.cs</span>     <span class="c-gray">← Tabela de contas, status e saldo</span>
+    │   └── <span class="c-cs">GrafoDependenciasView.cs</span> <span class="c-gray">← Mapeamento visual de predecessoras</span>
+    │
+    └── <span class="c-dir">MockServices/</span>
+        └── <span class="c-cs">TaskFlowMockService.cs</span> <span class="c-gray">← Stubs para simular o backend (Pessoa A)</span>
+</pre></div>
+      </div>
+
+      <div class="callout callout-done">
+        <strong>Build verificado:</strong> <code>dotnet build TaskFlow.App.csproj</code> rodando com sucesso — 0 erros, 0 warnings.
+      </div>
+      <div class="callout callout-info">
+        <strong>Referência ao Domain:</strong> A referência <code>&lt;ProjectReference&gt;</code> ao <code>TaskFlow.Domain</code> está ativa no <code>.sln</code> mas desacoplada via <code>ITaskFlowService</code>. O <code>TaskFlowMockService</code> cobre tudo enquanto a Pessoa A não finaliza o backend.
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── FLUXO DE NAVEGAÇÃO ── -->
+    <section class="section" id="fluxo">
+      <div class="section-title">Fluxo de Navegação — MenuNavigator</div>
+      <p class="section-desc">O <code>MenuNavigator.cs</code> centraliza o loop principal e roteia para a view correspondente, eliminando switch-case no <code>Main</code>.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-body">
+            <div class="flow-title">Inicialização — Program.cs</div>
+            <div class="flow-desc">O <code>Main()</code> instancia o <code>MenuNavigator</code> e chama <code>Iniciar()</code>. Toda a lógica de navegação fica encapsulada no navigator.</div>
+            <span class="flow-file">Program.cs</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-body">
+            <div class="flow-title">Cabeçalho + Menu Principal</div>
+            <div class="flow-desc">Loop while renderiza o cabeçalho colorido e as 7 opções do menu. Input lido com <code>Console.ReadLine()</code>, tratamento de null com <code>string?</code>.</div>
+            <span class="flow-file">Navigation/MenuNavigator.cs</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-body">
+            <div class="flow-title">ProcessarOpcao() — Roteamento</div>
+            <div class="flow-desc">Switch-case processa a opção e invoca o método estático <code>Renderizar()</code> da view correspondente. Opção inválida exibe mensagem em vermelho sem quebrar o loop.</div>
+            <span class="flow-file">Navigation/MenuNavigator.cs · Views/*View.cs</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">4</div>
+          <div class="flow-body">
+            <div class="flow-title">Views — Renderização via MockService</div>
+            <div class="flow-desc">Cada view recebe dados via <code>ITaskFlowService</code>. Na Fase 1, o <code>TaskFlowMockService</code> provê dados estáticos. Na integração com a Pessoa A, basta trocar a implementação sem alterar as views.</div>
+            <span class="flow-file">Views/DashboardView.cs · KanbanView.cs · FinanceiroView.cs · GrafoDependenciasView.cs</span>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">5</div>
+          <div class="flow-body">
+            <div class="flow-title">Pausa + Retorno ao Menu</div>
+            <div class="flow-desc">Após cada view, <code>Pausar()</code> aguarda Enter antes de limpar o console e reexibir o menu, garantindo UX fluida sem travamentos.</div>
+            <span class="flow-file">Navigation/MenuNavigator.cs · Pausar()</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── CHECKLISTS ── -->
+    <section class="section" id="etapa-1-1">
+      <div class="section-title">Etapa 1.1 — Configuração e Arquitetura</div>
+      <table class="check-table">
+        <thead><tr><th>Item</th><th>Arquivo / Artefato</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Criar projeto TaskFlow.App na solution</td><td><code>TaskFlow.App.csproj · TaskFlow.sln</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Pasta <code>Views/</code> para separar telas</td><td><code>TaskFlow.App/Views/</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Pasta <code>Navigation/</code> com gerenciador de menu</td><td><code>TaskFlow.App/Navigation/</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Pasta <code>MockServices/</code> para simular backend</td><td><code>TaskFlow.App/MockServices/</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Pasta <code>Services/</code> com contratos de integração</td><td><code>TaskFlow.App/Services/</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="etapa-1-2">
+      <div class="section-title">Etapa 1.2 — Menu Principal e Fluxo de Navegação</div>
+      <table class="check-table">
+        <thead><tr><th>Item</th><th>Detalhe</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Loop principal sem travamento</td><td>while + try/catch no Console.Clear()</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Cabeçalho com estado atual do sistema</td><td>ConsoleColor.Cyan, borda formatada</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Opção [1] Dashboard Geral</td><td>DashboardView.Renderizar()</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Opção [2] Projetos & Kanban</td><td>KanbanView.Renderizar()</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Opção [3] Fila de Execução</td><td>Stub via adapter (Fase 2)</td><td><span class="check-status cs-pend">⏳ Parcial</span></td></tr>
+          <tr><td>Opção [4] Grafo de Dependências</td><td>GrafoDependenciasView.Renderizar()</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Opção [5] Painel Financeiro</td><td>FinanceiroView.Renderizar()</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Opção [6] Desfazer Ação (Undo)</td><td>Stub via adapter da Pilha (Fase 2)</td><td><span class="check-status cs-pend">⏳ Parcial</span></td></tr>
+          <tr><td>Opção [0] Sair</td><td>_emExecucao = false</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="etapa-1-3">
+      <div class="section-title">Etapa 1.3 — Esqueleto das Views</div>
+      <table class="check-table">
+        <thead><tr><th>View</th><th>Conteúdo Renderizado</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td><code>DashboardView.cs</code></td><td>Resumo financeiro + tarefas urgentes ordenadas</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td><code>KanbanView.cs</code></td><td>Colunas ASCII (A Fazer / Em Andamento / Concluída)</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td><code>FinanceiroView.cs</code></td><td>Tabela de contas, status e saldo disponível</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td><code>GrafoDependenciasView.cs</code></td><td>Lista de tarefas com predecessoras e legenda</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section" id="etapa-1-4">
+      <div class="section-title">Etapa 1.4 — Contratos de Integração</div>
+      <table class="check-table">
+        <thead><tr><th>Item</th><th>Arquivo</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Interface ITaskFlowService com todos os métodos das views</td><td><code>Services/ITaskFlowService.cs</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Mock implementation para desenvolvimento autônomo</td><td><code>MockServices/TaskFlowMockService.cs</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Feedbacks visuais de erro amigáveis (ConsoleColor.Red)</td><td><code>Navigation/MenuNavigator.cs</code></td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+          <tr><td>Princípios SOLID básicos aplicados (SRP + DIP)</td><td>Toda a estrutura</td><td><span class="check-status cs-done">✓ Concluído</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <hr class="divider">
+
+    <!-- ── COMO EXECUTAR ── -->
+    <section class="section" id="como-executar">
+      <div class="section-title">Como Executar o Projeto</div>
+
+      <div class="callout callout-info" style="margin-bottom:20px;">
+        <strong>Pré-requisitos:</strong> .NET 8.0 SDK instalado. Verificar com <code>dotnet --version</code> no terminal.
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;">Opção 1 — Terminal (PowerShell)</div>
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dots">
+              <div class="code-dot" style="background:#EF4444"></div>
+              <div class="code-dot" style="background:#F59E0B"></div>
+              <div class="code-dot" style="background:#10B981"></div>
+            </div>
+            <span class="code-lang">PowerShell</span>
+          </div>
+          <div class="code-body"><pre><span class="c-gray"># Navegar até a pasta Fase1_PessoaB</span>
+<span class="c-acc">cd</span> <span class="c-file">"C:\Users\Fabrício\Documents\FACULDADE___UCL\Projeto AED2\Fase1_PessoaB"</span>
+
+<span class="c-gray"># Executar a aplicação</span>
+<span class="c-acc">dotnet run</span> --project <span class="c-file">TaskFlow.App\TaskFlow.App.csproj</span>
+
+<span class="c-gray"># Ou compilar e gerar o executável</span>
+<span class="c-acc">dotnet build</span> <span class="c-file">TaskFlow.sln</span></pre></div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:12px; font-weight:700; margin-bottom:8px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.05em;">Opção 2 — Visual Studio / VS Code</div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 18px; font-size:12.5px; color:var(--text-muted); line-height:1.8;">
+          1. Abrir o arquivo <strong>TaskFlow.sln</strong> no Visual Studio 2022 ou VS Code<br>
+          2. Definir <strong>TaskFlow.App</strong> como projeto de inicialização<br>
+          3. Pressionar <kbd style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--text-main);">F5</kbd> para Debug ou <kbd style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--text-main);">Ctrl+F5</kbd> para executar sem debug
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- TOC -->
+  <aside class="toc">
+    <div class="toc-title">Nesta Página</div>
+    <a href="#visao-geral" class="toc-item active">Visão Geral</a>
+    <a href="#equipe" class="toc-item">Equipe</a>
+    <a href="#arquitetura" class="toc-item">Arquitetura</a>
+    <a href="#fluxo" class="toc-item">Fluxo</a>
+    <a href="#etapa-1-1" class="toc-item">Etapa 1.1</a>
+    <a href="#etapa-1-2" class="toc-item">Etapa 1.2</a>
+    <a href="#etapa-1-3" class="toc-item">Etapa 1.3</a>
+    <a href="#etapa-1-4" class="toc-item">Etapa 1.4</a>
+    <a href="#como-executar" class="toc-item">Execução</a>
+  </aside>
+</div>
+
+<script>
+// TOC ativo por scroll
+const sections = document.querySelectorAll('.section');
+const tocLinks = document.querySelectorAll('.toc-item, .sidenav-link[href^="#"]');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      tocLinks.forEach(l => {
+        l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id);
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

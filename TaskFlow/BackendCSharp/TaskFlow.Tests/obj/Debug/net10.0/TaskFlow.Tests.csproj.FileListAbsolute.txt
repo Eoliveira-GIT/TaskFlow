@@ -1,0 +1,5 @@
+C:\Users\Fooxi\OneDrive\Documentos\Programação\TaskFlow\BackendCSharp\TaskFlow.Tests\obj\Debug\net10.0\TaskFlow.Tests.csproj.AssemblyReference.cache
+C:\Users\Fooxi\OneDrive\Documentos\Programação\TaskFlow\BackendCSharp\TaskFlow.Tests\obj\Debug\net10.0\TaskFlow.Tests.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Fooxi\OneDrive\Documentos\Programação\TaskFlow\BackendCSharp\TaskFlow.Tests\obj\Debug\net10.0\TaskFlow.Tests.AssemblyInfoInputs.cache
+C:\Users\Fooxi\OneDrive\Documentos\Programação\TaskFlow\BackendCSharp\TaskFlow.Tests\obj\Debug\net10.0\TaskFlow.Tests.AssemblyInfo.cs
+C:\Users\Fooxi\OneDrive\Documentos\Programação\TaskFlow\BackendCSharp\TaskFlow.Tests\obj\Debug\net10.0\TaskFlow.Tests.csproj.CoreCompileInputs.cache

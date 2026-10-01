@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Gerenciador de Projetos</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --sidebar-w: 220px;
+    --header-h: 56px;
+    --col-w: 300px;
+    --accent: #4F46E5;
+    --accent-light: #EEF2FF;
+    --bg: #F8F9FA;
+    --surface: #FFFFFF;
+    --border: #E5E7EB;
+    --text-main: #111827;
+    --text-muted: #6B7280;
+    --text-xs: #9CA3AF;
+    --tag-bg: #F3F4F6;
+    --danger: #EF4444;
+    --success: #10B981;
+    --warn: #F59E0B;
+    --info: #3B82F6;
+    --purple: #8B5CF6;
+    --orange: #F97316;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text-main);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  /* ──────────────────── SIDEBAR ──────────────────── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    user-select: none;
+    z-index: 10;
+  }
+
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-icon {
+    width: 30px; height: 30px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .logo-text { font-weight: 700; font-size: 15px; color: var(--text-main); }
+  .logo-chevron { margin-left: auto; color: var(--text-xs); font-size: 10px; cursor: pointer; }
+
+  .sidebar-section { padding: 10px 10px 4px; }
+  .sidebar-label { font-size: 10px; font-weight: 600; color: var(--text-xs); text-transform: uppercase; letter-spacing: .08em; padding: 0 8px; margin-bottom: 4px; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 10px; border-radius: 7px;
+    cursor: pointer; transition: background .15s;
+    color: var(--text-muted); font-weight: 500;
+    font-size: 13px; margin-bottom: 1px;
+  }
+  .nav-item:hover { background: var(--bg); color: var(--text-main); }
+  .nav-item.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-badge { margin-left: auto; background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 1px 6px; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    display: flex; align-items: center; gap: 9px;
+    cursor: pointer;
+  }
+  .avatar-sm {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: grid; place-items: center; font-size: 12px; font-weight: 700;
+    color: #fff; flex-shrink: 0;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-role { font-size: 10px; color: var(--text-muted); }
+
+  /* ──────────────────── MAIN ──────────────────── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ──────────────────── TOP HEADER ──────────────────── */
+  .topbar {
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 20px; gap: 12px; flex-shrink: 0;
+  }
+  .page-back { color: var(--text-muted); cursor: pointer; font-size: 18px; transition: color .15s; }
+  .page-back:hover { color: var(--text-main); }
+  .page-title { font-size: 16px; font-weight: 700; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+  .search-box {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px; min-width: 200px;
+    font-size: 12px; color: var(--text-muted);
+    cursor: text;
+  }
+  .search-box input { border: none; background: none; outline: none; font-size: 12px; color: var(--text-main); font-family: inherit; width: 100%; }
+  .search-box input::placeholder { color: var(--text-muted); }
+
+  .avatar-group { display: flex; }
+  .avatar-group .av {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff;
+    display: grid; place-items: center; font-size: 10px; font-weight: 700;
+    color: #fff; margin-left: -6px; transition: transform .15s;
+    cursor: pointer;
+  }
+  .avatar-group .av:first-child { margin-left: 0; }
+  .avatar-group .av:hover { transform: translateY(-2px); z-index: 2; }
+
+  .btn-primary {
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px; padding: 7px 14px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: opacity .15s, transform .15s; font-family: inherit;
+  }
+  .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+
+  .btn-icon {
+    width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); cursor: pointer; display: grid; place-items: center;
+    color: var(--text-muted); transition: all .15s;
+  }
+  .btn-icon:hover { background: var(--bg); color: var(--text-main); }
+
+  /* ──────────────────── SUB-NAV (Board tabs) ──────────────────── */
+  .subnav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 20px; gap: 2px; flex-shrink: 0;
+    height: 42px;
+  }
+  .subnav-tab {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 12px; height: 100%; cursor: pointer;
+    color: var(--text-muted); font-weight: 500; font-size: 12px;
+    border-bottom: 2px solid transparent;
+    transition: all .15s; white-space: nowrap;
+  }
+  .subnav-tab:hover { color: var(--text-main); }
+  .subnav-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .subnav-tab svg { width: 14px; height: 14px; }
+  .subnav-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+  .view-toggle {
+    display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+  }
+  .view-btn {
+    padding: 5px 10px; cursor: pointer; font-size: 12px; color: var(--text-muted);
+    background: var(--surface); border: none; font-family: inherit;
+    transition: all .15s; display: flex; align-items: center; gap: 4px;
+  }
+  .view-btn.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .view-btn svg { width: 13px; height: 13px; }
+
+  /* ──────────────────── BOARD ──────────────────── */
+  .board-wrap {
+    flex: 1; overflow-x: auto; overflow-y: hidden;
+    padding: 20px;
+    display: flex; gap: 16px; align-items: flex-start;
+  }
+
+  .kanban-col {
+    width: var(--col-w);
+    min-width: var(--col-w);
+    background: var(--bg);
+    border-radius: 12px;
+    display: flex; flex-direction: column;
+    max-height: calc(100vh - var(--header-h) - 42px - 40px);
+    flex-shrink: 0;
+  }
+
+  .col-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px 10px;
+    font-weight: 600; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .col-count {
+    background: rgba(0,0,0,.08); color: var(--text-muted);
+    font-size: 11px; font-weight: 700; border-radius: 5px;
+    padding: 1px 6px; margin-left: 2px;
+  }
+  .col-actions { margin-left: auto; display: flex; gap: 4px; }
+  .col-action-btn {
+    width: 22px; height: 22px; border-radius: 5px; cursor: pointer;
+    display: grid; place-items: center; color: var(--text-xs);
+    transition: background .15s;
+  }
+  .col-action-btn:hover { background: var(--border); color: var(--text-muted); }
+  .col-action-btn svg { width: 13px; height: 13px; }
+
+  .col-tasks {
+    flex: 1; overflow-y: auto; padding: 0 10px 10px;
+    display: flex; flex-direction: column; gap: 8px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+  .col-tasks::-webkit-scrollbar { width: 4px; }
+  .col-tasks::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* ──────────────────── TASK CARD ──────────────────── */
+  .task-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 13px 11px;
+    cursor: pointer;
+    transition: box-shadow .15s, transform .15s, border-color .15s;
+    position: relative;
+  }
+  .task-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+    transform: translateY(-1px);
+    border-color: #D1D5DB;
+  }
+  .task-card.dragging { opacity: .5; }
+
+  .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .tag {
+    font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 5px;
+  }
+  .tag-purple { background: #EDE9FE; color: #7C3AED; }
+  .tag-blue   { background: #DBEAFE; color: #2563EB; }
+  .tag-green  { background: #D1FAE5; color: #059669; }
+  .tag-orange { background: #FFEDD5; color: #C2410C; }
+  .tag-pink   { background: #FCE7F3; color: #BE185D; }
+  .tag-yellow { background: #FEF3C7; color: #B45309; }
+  .tag-gray   { background: var(--tag-bg); color: var(--text-muted); }
+  .tag-red    { background: #FEE2E2; color: #DC2626; }
+
+  .card-title {
+    font-size: 13px; font-weight: 600; color: var(--text-main);
+    line-height: 1.4; margin-bottom: 10px;
+  }
+
+  .card-priority {
+    display: flex; gap: 2px; margin-bottom: 10px;
+  }
+  .prio-bar {
+    width: 22px; height: 5px; border-radius: 3px;
+  }
+
+  .card-meta {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+  .card-meta-item { display: flex; align-items: center; gap: 3px; }
+  .card-meta-item svg { width: 11px; height: 11px; flex-shrink: 0; }
+  .due-soon { color: var(--warn); font-weight: 600; }
+  .due-overdue { color: var(--danger); font-weight: 600; }
+  .due-ok { color: var(--success); }
+
+  .card-footer {
+    display: flex; align-items: center; margin-top: 10px;
+    border-top: 1px solid var(--border); padding-top: 9px;
+    gap: 6px;
+  }
+  .card-avatars { display: flex; }
+  .card-av {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 1.5px solid var(--surface);
+    display: grid; place-items: center; font-size: 8px; font-weight: 700;
+    color: #fff; margin-left: -5px; flex-shrink: 0;
+  }
+  .card-av:first-child { margin-left: 0; }
+  .card-stats { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .card-stat { display: flex; align-items: center; gap: 3px; color: var(--text-xs); font-size: 11px; }
+  .card-stat svg { width: 11px; height: 11px; }
+
+  .add-task-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 14px; color: var(--text-muted); font-size: 12px;
+    font-weight: 500; cursor: pointer; border-radius: 8px;
+    transition: all .15s; margin: 0 10px; flex-shrink: 0;
+    border: 1.5px dashed var(--border); font-family: inherit;
+    background: none;
+  }
+  .add-task-btn:hover { background: var(--surface); color: var(--accent); border-color: var(--accent); }
+
+  .add-col-btn {
+    width: var(--col-w); min-width: var(--col-w);
+    border: 2px dashed var(--border); border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; cursor: pointer; color: var(--text-muted);
+    font-size: 13px; font-weight: 500; padding: 30px;
+    transition: all .15s; flex-shrink: 0; min-height: 100px;
+  }
+  .add-col-btn:hover { background: var(--surface); color: var(--accent); border-color: var(--accent); }
+  .add-col-btn svg { width: 20px; height: 20px; }
+
+  /* ──────────────────── MODAL ──────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.25);
+    display: none; place-items: center; z-index: 100;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: grid; }
+  .modal {
+    background: var(--surface); border-radius: 14px; width: 520px;
+    max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.15);
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  .modal-header {
+    padding: 18px 20px 0; display: flex; align-items: flex-start; gap: 10px;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; flex: 1; }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 7px; border: none;
+    background: var(--bg); cursor: pointer; font-size: 16px; color: var(--text-muted);
+    display: grid; place-items: center; transition: all .15s;
+    font-family: inherit;
+  }
+  .modal-close:hover { background: var(--border); color: var(--text-main); }
+  .modal-body { padding: 16px 20px 20px; }
+  .modal-section { margin-bottom: 14px; }
+  .modal-section-label { font-size: 10px; font-weight: 600; color: var(--text-xs); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; }
+  .modal-description { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .modal-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .modal-meta-row { display: flex; gap: 20px; flex-wrap: wrap; }
+  .modal-meta-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+  .modal-meta-item svg { width: 13px; height: 13px; color: var(--text-xs); }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-ghost {
+    background: var(--bg); color: var(--text-muted); border: 1px solid var(--border);
+    border-radius: 7px; padding: 6px 14px; font-size: 12px; font-weight: 500;
+    cursor: pointer; font-family: inherit; transition: all .15s;
+  }
+  .btn-ghost:hover { background: var(--border); color: var(--text-main); }
+
+  /* ──────────────────── ADD TASK MODAL ──────────────────── */
+  .modal-input {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 11px; font-size: 13px; font-family: inherit;
+    color: var(--text-main); outline: none; transition: border-color .15s;
+    background: var(--surface);
+  }
+  .modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,70,229,.08); }
+  .modal-select {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 11px; font-size: 12px; font-family: inherit;
+    color: var(--text-main); outline: none; background: var(--surface);
+    cursor: pointer;
+  }
+
+  /* ──────────────────── TOAST ──────────────────── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 200;
+    background: #1F2937; color: #fff; font-size: 12px;
+    padding: 10px 16px; border-radius: 9px; box-shadow: 0 4px 20px rgba(0,0,0,.2);
+    transform: translateY(60px); opacity: 0; transition: all .3s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ──────────────────── EMPTY STATE ──────────────────── */
+  .empty-col {
+    padding: 24px 14px; text-align: center; color: var(--text-xs);
+    font-size: 12px; line-height: 1.6;
+  }
+  .empty-col svg { width: 28px; height: 28px; margin-bottom: 8px; opacity: .4; }
+
+  /* ──────────────────── SCROLLBAR BOARD ──────────────────── */
+  .board-wrap::-webkit-scrollbar { height: 6px; }
+  .board-wrap::-webkit-scrollbar-track { background: transparent; }
+  .board-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+
+  /* ──────────────────── PROGRESS BAR ──────────────────── */
+  .progress-ring { position: relative; width: 32px; height: 32px; }
+  .progress-ring circle { fill: none; stroke-width: 3; cx: 16; cy: 16; r: 13; }
+  .progress-ring .bg { stroke: var(--border); }
+  .progress-ring .fill { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 82; transition: stroke-dashoffset .5s; }
+  .progress-ring .label { position: absolute; inset: 0; display: grid; place-items: center; font-size: 8px; font-weight: 700; color: var(--accent); }
+
+  /* ──────────────────── FILTER BADGE ──────────────────── */
+  .filter-badge { background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; border-radius: 50%; width: 14px; height: 14px; display: grid; place-items: center; margin-left: -3px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════ SIDEBAR ══════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">TF</div>
+    <span class="logo-text">TaskFlow</span>
+    <span class="logo-chevron">▾</span>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Principal</div>
+    <div class="nav-item" onclick="setNav(this,'dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item active" onclick="setNav(this,'projetos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      Projetos
+      <span class="nav-badge">3</span>
+    </div>
+    <div class="nav-item" onclick="setNav(this,'tarefas')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Minhas Tarefas
+    </div>
+    <div class="nav-item" onclick="setNav(this,'financeiro')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      Financeiro
+    </div>
+    <div class="nav-item" onclick="setNav(this,'grafo')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Grafo de Deps.
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Configurações</div>
+    <div class="nav-item" onclick="setNav(this,'config')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41"/></svg>
+      Configurações
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="avatar-sm">PB</div>
+    <div class="user-info">
+      <div class="user-name">Pessoa B</div>
+      <div class="user-role">Dev · Interface</div>
+    </div>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--text-xs)"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════════ MAIN ══════════════════════════════════════════════ -->
+<div class="main">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="page-back" onclick="history.back()">←</span>
+    <span class="page-title">Gerenciar Projeto — TaskFlow</span>
+
+    <div class="topbar-right">
+      <div class="search-box">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input id="searchInput" type="text" placeholder="Buscar tarefas..." oninput="filterCards(this.value)">
+      </div>
+
+      <div class="avatar-group">
+        <div class="av" style="background:#6366F1" title="Pessoa A">PA</div>
+        <div class="av" style="background:#EC4899" title="Pessoa B">PB</div>
+        <div class="av" style="background:#F59E0B" title="Orientador">OR</div>
+      </div>
+
+      <div class="btn-icon" title="Notificações">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+
+      <button class="btn-primary" onclick="openAddModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Tarefa
+      </button>
+    </div>
+  </div>
+
+  <!-- SUB-NAV -->
+  <div class="subnav">
+    <div class="subnav-tab active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="20" rx="1"/><rect x="14" y="2" width="8" height="14" rx="1"/></svg>
+      Kanban
+    </div>
+    <div class="subnav-tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Lista
+    </div>
+    <div class="subnav-tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Calendário
+    </div>
+    <div class="subnav-tab">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Relatórios
+    </div>
+
+    <div class="subnav-right">
+      <div class="view-toggle">
+        <button class="view-btn active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="20" rx="1"/><rect x="14" y="2" width="8" height="14" rx="1"/></svg>
+          Quadro
+        </button>
+        <button class="view-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+          Lista
+        </button>
+      </div>
+
+      <button class="btn-icon" style="display:flex;align-items:center;gap:4px;width:auto;padding:0 10px;font-size:11px;color:var(--text-muted);" title="Filtros">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filtrar
+        <div class="filter-badge">1</div>
+      </button>
+    </div>
+  </div>
+
+  <!-- KANBAN BOARD -->
+  <div class="board-wrap" id="boardWrap">
+
+    <!-- ── COLUNA: A FAZER ── -->
+    <div class="kanban-col" id="col-todo" ondragover="event.preventDefault()" ondrop="dropCard(event,'todo')">
+      <div class="col-header">
+        <div class="col-dot" style="background:#9CA3AF"></div>
+        <span>A Fazer</span>
+        <div class="col-count" id="count-todo">2</div>
+        <div class="col-actions">
+          <div class="col-action-btn" onclick="openAddModal('todo')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="col-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="col-tasks" id="tasks-todo">
+        <!-- Card 1 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c1')" onclick="openCard('c1')" id="c1" data-col="todo">
+          <div class="card-tags">
+            <span class="tag tag-purple">Estratégia</span>
+            <span class="tag tag-blue">UX</span>
+          </div>
+          <div class="card-title">Configurar Banco de Dados e Entidades</div>
+          <div class="card-priority">
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-item due-soon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              Vence em 9 dias
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#6366F1">PA</div>
+              <div class="card-av" style="background:#EC4899">PB</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                8
+              </div>
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                3
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c2')" onclick="openCard('c2')" id="c2" data-col="todo">
+          <div class="card-tags">
+            <span class="tag tag-green">Quantitativo</span>
+            <span class="tag tag-blue">UX</span>
+          </div>
+          <div class="card-title">Implementar Tela de Login com Hash de Senha</div>
+          <div class="card-priority">
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-item due-overdue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              🔒 Bloqueada (depende de #1)
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#6366F1">L</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                2
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="add-task-btn" onclick="openAddModal('todo')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Tarefa
+      </button>
+    </div>
+
+    <!-- ── COLUNA: EM ANDAMENTO ── -->
+    <div class="kanban-col" id="col-doing" ondragover="event.preventDefault()" ondrop="dropCard(event,'doing')">
+      <div class="col-header">
+        <div class="col-dot" style="background:#3B82F6"></div>
+        <span>Em Andamento</span>
+        <div class="col-count" id="count-doing">2</div>
+        <div class="col-actions">
+          <div class="col-action-btn" onclick="openAddModal('doing')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="col-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="col-tasks" id="tasks-doing">
+        <!-- Card 3 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c3')" onclick="openCard('c3')" id="c3" data-col="doing">
+          <div class="card-tags">
+            <span class="tag tag-pink">Qualitativo</span>
+            <span class="tag tag-orange">Síntese</span>
+          </div>
+          <div class="card-title">Criar Grafo de Dependências entre Tarefas</div>
+          <div class="card-priority">
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+            <div class="prio-bar" style="background:#EF4444"></div>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-item due-soon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              Vence em 4 hrs
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#EC4899">PB</div>
+              <div class="card-av" style="background:#6366F1">PA</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                2
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c4')" onclick="openCard('c4')" id="c4" data-col="doing">
+          <div class="card-tags">
+            <span class="tag tag-purple">MenuNavigator</span>
+          </div>
+          <div class="card-title">Implementar Loop Principal do Menu (Navigation)</div>
+          <div class="card-priority">
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-item due-ok">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              Vence em 12 hrs
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#EC4899">PB</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                3
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="add-task-btn" onclick="openAddModal('doing')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Tarefa
+      </button>
+    </div>
+
+    <!-- ── COLUNA: REVISÃO ── -->
+    <div class="kanban-col" id="col-review" ondragover="event.preventDefault()" ondrop="dropCard(event,'review')">
+      <div class="col-header">
+        <div class="col-dot" style="background:#F97316"></div>
+        <span>Revisão</span>
+        <div class="col-count" id="count-review">2</div>
+        <div class="col-actions">
+          <div class="col-action-btn" onclick="openAddModal('review')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="col-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="col-tasks" id="tasks-review">
+        <!-- Card 5 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c5')" onclick="openCard('c5')" id="c5" data-col="review">
+          <div class="card-tags">
+            <span class="tag tag-blue">UX</span>
+            <span class="tag tag-yellow">Iterações</span>
+          </div>
+          <div class="card-title">Design Visual das Views (Dashboard, Kanban, Financeiro)</div>
+          <div class="card-priority">
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-item due-soon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              Vence em 3 hrs
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#EC4899">PB</div>
+              <div class="card-av" style="background:#F59E0B">OR</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                3
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c6')" onclick="openCard('c6')" id="c6" data-col="review">
+          <div class="card-tags">
+            <span class="tag tag-orange">Feedback</span>
+          </div>
+          <div class="card-title">Implementar Painel Financeiro (FinanceiroView.cs)</div>
+          <div class="card-priority">
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#F59E0B"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+            <div class="prio-bar" style="background:#E5E7EB"></div>
+          </div>
+          <div class="card-meta">
+            <div class="card-meta-item due-soon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+              Vence em 6 hrs
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#EC4899">PB</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                2
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="add-task-btn" onclick="openAddModal('review')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Tarefa
+      </button>
+    </div>
+
+    <!-- ── COLUNA: CONCLUÍDO ── -->
+    <div class="kanban-col" id="col-done" ondragover="event.preventDefault()" ondrop="dropCard(event,'done')">
+      <div class="col-header">
+        <div class="col-dot" style="background:#10B981"></div>
+        <span>Concluído</span>
+        <div class="col-count" id="count-done">2</div>
+        <div class="col-actions">
+          <div class="col-action-btn" onclick="openAddModal('done')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="col-action-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="col-tasks" id="tasks-done">
+        <!-- Card 7 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c7')" onclick="openCard('c7')" id="c7" data-col="done" style="opacity:.75">
+          <div class="card-tags">
+            <span class="tag tag-purple">Planejamento</span>
+            <span class="tag tag-green">Pesquisa</span>
+          </div>
+          <div class="card-title" style="text-decoration:line-through; color:var(--text-muted)">Criar Arquitetura de Pastas do Projeto (Fase 1.1)</div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#EC4899">PB</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat" style="color:var(--success)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Concluído
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 8 -->
+        <div class="task-card" draggable="true" ondragstart="dragStart(event,'c8')" onclick="openCard('c8')" id="c8" data-col="done" style="opacity:.75">
+          <div class="card-tags">
+            <span class="tag tag-green">Configuração</span>
+          </div>
+          <div class="card-title" style="text-decoration:line-through; color:var(--text-muted)">Configurar Solution (.sln) com TaskFlow.App e TaskFlow.Domain</div>
+          <div class="card-footer">
+            <div class="card-avatars">
+              <div class="card-av" style="background:#EC4899">PB</div>
+              <div class="card-av" style="background:#6366F1">PA</div>
+            </div>
+            <div class="card-stats">
+              <div class="card-stat" style="color:var(--success)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Concluído
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="add-task-btn" onclick="openAddModal('done')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Adicionar Tarefa
+      </button>
+    </div>
+
+    <!-- ── ADICIONAR COLUNA ── -->
+    <div class="add-col-btn" onclick="addColumn()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova Coluna
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ MODAL DETALHE ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="cardModal" onclick="if(event.target===this)closeModal('cardModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div id="modalTags" class="card-tags" style="margin-bottom:8px"></div>
+        <div class="modal-title" id="modalTitle">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('cardModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-label">Descrição</div>
+        <div class="modal-description" id="modalDesc">—</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Tags</div>
+        <div id="modalTagsFull" class="modal-tags"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Detalhes</div>
+        <div class="modal-meta-row">
+          <div class="modal-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
+            <span id="modalDue">—</span>
+          </div>
+          <div class="modal-meta-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span id="modalStatus">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('cardModal')">Fechar</button>
+      <button class="btn-primary" onclick="closeModal('cardModal')">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar Tarefa
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ MODAL NOVA TAREFA ══════════════════════════════════════════════ -->
+<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeModal('addModal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Nova Tarefa</div>
+      <button class="modal-close" onclick="closeModal('addModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-label">Título da Tarefa *</div>
+        <input class="modal-input" id="newTaskTitle" type="text" placeholder="Descreva a tarefa...">
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Coluna</div>
+        <select class="modal-select" id="newTaskCol">
+          <option value="todo">A Fazer</option>
+          <option value="doing">Em Andamento</option>
+          <option value="review">Revisão</option>
+          <option value="done">Concluído</option>
+        </select>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Prioridade</div>
+        <select class="modal-select" id="newTaskPrio">
+          <option value="alta">Alta</option>
+          <option value="media" selected>Média</option>
+          <option value="baixa">Baixa</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('addModal')">Cancelar</button>
+      <button class="btn-primary" onclick="createTask()">Criar Tarefa</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✓ Tarefa movida com sucesso</div>
+
+<script>
+// ─── DADOS DOS CARDS ───
+const cardData = {
+  c1: {
+    title: 'Configurar Banco de Dados e Entidades',
+    desc: 'Criar o script SQL inicial com as tabelas de Projetos, Tarefas e Usuários. Definir os modelos de domínio no TaskFlow.Domain para serem consumidos pela UI.',
+    tags: [['Estratégia','tag-purple'],['UX','tag-blue']],
+    due: 'Vence em 9 dias',
+    status: 'A Fazer'
+  },
+  c2: {
+    title: 'Implementar Tela de Login com Hash de Senha',
+    desc: 'Criar a View de autenticação integrada ao ITaskFlowService. Utilizar SHA256 para hash da senha. Esta tarefa está bloqueada pela conclusão do Card #1.',
+    tags: [['Quantitativo','tag-green'],['UX','tag-blue']],
+    due: '🔒 Bloqueada — depende de #1',
+    status: 'A Fazer (Bloqueada)'
+  },
+  c3: {
+    title: 'Criar Grafo de Dependências entre Tarefas',
+    desc: 'Implementar estrutura de lista de adjacência no TaskFlow.Domain para representar as dependências entre tarefas. A GrafoDependenciasView.cs deve consumir esse serviço via ITaskFlowService.',
+    tags: [['Qualitativo','tag-pink'],['Síntese','tag-orange']],
+    due: 'Vence em 4 hrs',
+    status: 'Em Andamento — ALTA PRIORIDADE'
+  },
+  c4: {
+    title: 'Implementar Loop Principal do Menu (Navigation)',
+    desc: 'Finalizar o MenuNavigator.cs com o loop resistente a exceções, cabeçalho colorido e roteamento para todas as 6 views disponíveis na Fase 1.',
+    tags: [['MenuNavigator','tag-purple']],
+    due: 'Vence em 12 hrs',
+    status: 'Em Andamento'
+  },
+  c5: {
+    title: 'Design Visual das Views (Dashboard, Kanban, Financeiro)',
+    desc: 'Revisar o layout ASCII de cada view para garantir consistência visual no terminal. Usar ConsoleColor para destacar áreas críticas e manter o padrão de interface definido no checklist.',
+    tags: [['UX','tag-blue'],['Iterações','tag-yellow']],
+    due: 'Vence em 3 hrs',
+    status: 'Revisão — aguardando feedback'
+  },
+  c6: {
+    title: 'Implementar Painel Financeiro (FinanceiroView.cs)',
+    desc: 'Desenvolver a tela de contas a pagar com tabela formatada, status (Pago/Pendente/Atrasada) e cálculo do saldo disponível. Integrar ao MockService para dados de demonstração.',
+    tags: [['Feedback','tag-orange']],
+    due: 'Vence em 6 hrs',
+    status: 'Revisão'
+  },
+  c7: {
+    title: 'Criar Arquitetura de Pastas do Projeto (Fase 1.1)',
+    desc: 'Concluído com sucesso. Estrutura Views/, Navigation/, Services/ e MockServices/ criadas e documentadas no CHECKLIST_FASE1_PessoaB.md.',
+    tags: [['Planejamento','tag-purple'],['Pesquisa','tag-green']],
+    due: '—',
+    status: '✅ Concluído'
+  },
+  c8: {
+    title: 'Configurar Solution (.sln) com TaskFlow.App e TaskFlow.Domain',
+    desc: 'Solution criada, ambos os projetos registrados e build rodando sem erros no dotnet CLI. Referência ao Domain comentada aguardando implementação da Pessoa A.',
+    tags: [['Configuração','tag-green']],
+    due: '—',
+    status: '✅ Concluído'
+  }
+};
+
+// ─── DRAG & DROP ───
+let dragging = null;
+function dragStart(e, id) { dragging = id; e.currentTarget.classList.add('dragging'); }
+
+function dropCard(e, colId) {
+  e.preventDefault();
+  if (!dragging) return;
+  const card = document.getElementById(dragging);
+  const oldCol = card.dataset.col;
+  if (oldCol === colId) { dragging = null; return; }
+  card.classList.remove('dragging');
+  card.dataset.col = colId;
+  document.getElementById('tasks-' + colId).appendChild(card);
+  updateCounts();
+  if (colId === 'done') {
+    card.style.opacity = '.75';
+    card.querySelector('.card-title').style.textDecoration = 'line-through';
+    card.querySelector('.card-title').style.color = 'var(--text-muted)';
+  } else {
+    card.style.opacity = '1';
+    card.querySelector('.card-title').style.textDecoration = '';
+    card.querySelector('.card-title').style.color = '';
+  }
+  dragging = null;
+  showToast('Tarefa movida para "' + {'todo':'A Fazer','doing':'Em Andamento','review':'Revisão','done':'Concluído'}[colId] + '"');
+}
+
+function updateCounts() {
+  ['todo','doing','review','done'].forEach(col => {
+    document.getElementById('count-' + col).textContent =
+      document.getElementById('tasks-' + col).querySelectorAll('.task-card').length;
+  });
+}
+
+// ─── MODAL DETALHE ───
+function openCard(id) {
+  const d = cardData[id]; if (!d) return;
+  document.getElementById('modalTitle').textContent = d.title;
+  document.getElementById('modalDesc').textContent = d.desc;
+  document.getElementById('modalDue').textContent = d.due;
+  document.getElementById('modalStatus').textContent = d.status;
+  const tagsEl = document.getElementById('modalTagsFull');
+  tagsEl.innerHTML = d.tags.map(([t,c]) => `<span class="tag ${c}">${t}</span>`).join('');
+  document.getElementById('modalTags').innerHTML = d.tags.map(([t,c]) => `<span class="tag ${c}">${t}</span>`).join('');
+  document.getElementById('cardModal').classList.add('open');
+}
+
+// ─── MODAL NOVA TAREFA ───
+let addTargetCol = 'todo';
+function openAddModal(col) {
+  addTargetCol = col || 'todo';
+  document.getElementById('newTaskCol').value = addTargetCol;
+  document.getElementById('newTaskTitle').value = '';
+  document.getElementById('addModal').classList.add('open');
+  setTimeout(() => document.getElementById('newTaskTitle').focus(), 50);
+}
+
+let cardCounter = 100;
+function createTask() {
+  const title = document.getElementById('newTaskTitle').value.trim();
+  if (!title) { document.getElementById('newTaskTitle').style.borderColor='var(--danger)'; return; }
+  document.getElementById('newTaskTitle').style.borderColor='';
+  const col = document.getElementById('newTaskCol').value;
+  const prio = document.getElementById('newTaskPrio').value;
+  const prioColor = prio === 'alta' ? '#EF4444' : prio === 'media' ? '#F59E0B' : '#10B981';
+  const id = 'c' + (++cardCounter);
+  const card = document.createElement('div');
+  card.className = 'task-card';
+  card.id = id;
+  card.dataset.col = col;
+  card.draggable = true;
+  card.setAttribute('ondragstart', `dragStart(event,'${id}')`);
+  card.setAttribute('onclick', `openCard('${id}')`);
+  card.innerHTML = `
+    <div class="card-tags"><span class="tag tag-gray">Nova</span></div>
+    <div class="card-title">${title}</div>
+    <div class="card-priority">
+      ${[1,2,3,4,5].map(i => `<div class="prio-bar" style="background:${i<=( prio==='alta'?5:prio==='media'?3:1) ?prioColor:'#E5E7EB'}"></div>`).join('')}
+    </div>
+    <div class="card-footer">
+      <div class="card-avatars"><div class="card-av" style="background:#EC4899">PB</div></div>
+      <div class="card-stats"><div class="card-stat" style="color:var(--text-xs)">Agora</div></div>
+    </div>`;
+  cardData[id] = { title, desc: 'Tarefa criada via painel TaskFlow.', tags: [['Nova','tag-gray']], due: 'Sem prazo', status: col };
+  document.getElementById('tasks-' + col).appendChild(card);
+  updateCounts();
+  closeModal('addModal');
+  showToast('Tarefa criada com sucesso!');
+}
+
+// ─── FECHAR MODAL ───
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ─── BUSCA ───
+function filterCards(q) {
+  const query = q.toLowerCase();
+  document.querySelectorAll('.task-card').forEach(card => {
+    const title = card.querySelector('.card-title').textContent.toLowerCase();
+    card.style.display = title.includes(query) ? '' : 'none';
+  });
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── NAV SIDEBAR ───
+function setNav(el, page) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─── TECLADO ───
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal('cardModal'); closeModal('addModal'); }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'k') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if ((e.ctrlKey||e.metaKey) && e.key === 'Enter') { if (document.getElementById('addModal').classList.contains('open')) createTask(); }
+});
+
+// ─── NOVA COLUNA ───
+let colCounter = 0;
+function addColumn() {
+  const names = ['Pendente','Validação','Entregue'];
+  const colors = ['#8B5CF6','#0EA5E9','#14B8A6'];
+  const name = prompt('Nome da nova coluna:');
+  if (!name) return;
+  const id = 'custom-' + (++colCounter);
+  const wrap = document.getElementById('boardWrap');
+  const addBtn = wrap.lastElementChild;
+  const col = document.createElement('div');
+  col.className = 'kanban-col';
+  col.id = 'col-' + id;
+  col.setAttribute('ondragover','event.preventDefault()');
+  col.setAttribute('ondrop', `dropCard(event,'${id}')`);
+  col.innerHTML = `
+    <div class="col-header">
+      <div class="col-dot" style="background:${colors[colCounter%3]}"></div>
+      <span>${name}</span>
+      <div class="col-count" id="count-${id}">0</div>
+      <div class="col-actions">
+        <div class="col-action-btn" onclick="openAddModal('${id}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="col-tasks" id="tasks-${id}">
+      <div class="empty-col">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        Nenhuma tarefa aqui ainda
+      </div>
+    </div>
+    <button class="add-task-btn" onclick="openAddModal('${id}')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Adicionar Tarefa
+    </button>`;
+  wrap.insertBefore(col, addBtn);
+  showToast('Coluna "' + name + '" criada!');
+}
+</script>
+</body>
+</html>

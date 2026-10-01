@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskFlow - Checklist Etapa 1.1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            padding: 40px;
+            text-align: center;
+            color: #1a1a2e;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        .container { max-width: 900px; margin: 30px auto; padding: 0 20px; }
+        .card {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+        .card h2 { color: #4ade80; font-size: 1.5em; margin-bottom: 15px; border-bottom: 2px solid #4ade80; padding-bottom: 8px; }
+        .check-section { margin-bottom: 20px; }
+        .check-section h3 { color: #a78bfa; margin-bottom: 10px; }
+        .check-item {
+            padding: 8px 0 8px 30px;
+            position: relative;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .check-item::before {
+            content: '☐';
+            position: absolute;
+            left: 0;
+            font-size: 1.2em;
+        }
+        .check-item.done { color: #4ade80; }
+        .check-item.done::before { content: '✅'; }
+        .badge { display: inline-block; background: #4ade80; color: #1a1a2e; padding: 3px 12px; border-radius: 12px; font-size: 0.8em; font-weight: bold; margin-left: 8px; }
+        .stats { display: flex; gap: 20px; margin: 20px 0; }
+        .stat { text-align: center; flex: 1; background: rgba(74,222,128,0.15); padding: 15px; border-radius: 12px; }
+        .stat .num { font-size: 2em; font-weight: bold; color: #4ade80; }
+        .stat .txt { color: #aaa; font-size: 0.9em; }
+        a { color: #667eea; }
+        .back { display: inline-block; margin-top: 20px; padding: 10px 20px; background: linear-gradient(90deg, #667eea, #764ba2); color: #fff; text-decoration: none; border-radius: 8px; }
+        .back:hover { opacity: 0.85; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📋 Checklist Etapa 1.1</h1>
+        <p>Configuração do Projeto e Arquitetura de Pastas</p>
+    </div>
+    <div class="container">
+        <div class="stats">
+            <div class="stat"><div class="num">✅</div><div class="txt">Itens Concluídos</div></div>
+            <div class="stat"><div class="num">5</div><div class="txt">Subetapas</div></div>
+            <div class="stat"><div class="num">4</div><div class="txt">Pastas Criadas</div></div>
+        </div>
+
+        <div class="card">
+            <h2>Etapa 1.1: Configuração do Projeto e Arquitetura de Pastas</h2>
+
+            <div class="check-section">
+                <h3>1.1.1 - Estrutura do Solution</h3>
+                <div class="check-item done">Criar projeto <code>TaskFlow.App</code> na solution <code>TaskFlow.sln</code></div>
+                <div class="check-item done">Referenciar <code>TaskFlow.Domain</code> (comentada até Domain ficar pronto)</div>
+            </div>
+
+            <div class="check-section">
+                <h3>1.1.2 - Pastas Criadas</h3>
+                <div class="check-item done">📁 <code>Views/</code> — Separar cada tela do sistema</div>
+                <div class="check-item done">📁 <code>Navigation/</code> — Gerenciador central de menus e rotas</div>
+                <div class="check-item done">📁 <code>MockServices/</code> — Simular chamadas ao backend</div>
+                <div class="check-item done">📁 <code>Services/</code> — Contratos de integração (interfaces)</div>
+            </div>
+
+            <div class="check-section">
+                <h3>1.1.3 - Arquivos Criados</h3>
+                <div class="check-item done">📄 <code>Program.cs</code> — Ponto de entrada da aplicação</div>
+                <div class="check-item done">📄 <code>TaskFlow.App.csproj</code> — Configuração do projeto .NET</div>
+                <div class="check-item done">📄 <code>Services/ITaskFlowService.cs</code> — Interface de contrato</div>
+                <div class="check-item done">📄 <code>Navigation/MenuNavigator.cs</code> — Controlador de navegação</div>
+                <div class="check-item done">📄 <code>Views/DashboardView.cs</code> — Tela Dashboard</div>
+                <div class="check-item done">📄 <code>Views/KanbanView.cs</code> — Tela Kanban</div>
+                <div class="check-item done">📄 <code>Views/FinanceiroView.cs</code> — Tela Financeira</div>
+                <div class="check-item done">📄 <code>Views/GrafoDependenciasView.cs</code> — Tela Grafo</div>
+                <div class="check-item done">📄 <code>MockServices/TaskFlowMockService.cs</code> — Mock do serviço</div>
+            </div>
+
+            <div class="check-section">
+                <h3>1.1.4 - Princípios Aplicados</h3>
+                <div class="check-item done">✅ Código modular, limpo e legível (C# moderno)</div>
+                <div class="check-item done">✅ Separação de responsabilidades (UI ≠ Negócio)</div>
+                <div class="check-item done">✅ Interface/Contrato para desacoplamento</div>
+                <div class="check-item done">✅ Padrão SOLID básico aplicado</div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back">← Voltar à Apresentação Principal</a>
+    </div>
+</body>
+</html>
