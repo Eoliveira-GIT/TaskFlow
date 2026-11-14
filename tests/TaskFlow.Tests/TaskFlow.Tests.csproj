@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
+    <ProjectReference Include="..\..\src\TaskFlow.Domain\TaskFlow.Domain.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
