@@ -1,4 +1,4 @@
-namespace TaskFlow.App.Services
+namespace TaskFlow.Application
 {
     public interface ITaskFlowService
     {
