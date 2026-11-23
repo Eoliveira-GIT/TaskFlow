@@ -204,11 +204,13 @@ dotnet run --project src\TaskFlow.App\TaskFlow.App.csproj
 
 Ou, no Visual Studio / VS Code: abra `TaskFlow.sln`, defina `TaskFlow.App` como projeto de inicialização e pressione `F5` ou `Ctrl + F5`.
 
-**Rodar o teste do Domain**
+**Rodar os teste do Domain**
 
 ```powershell
 dotnet run --project tests\TaskFlow.Tests
 ```
+
+Mostra a demonstração do grafo e, em seguida, os testes automáticos (`[PASSOU]` / `[FALHOU]`). O código de saída é `0` quando todos passam e `1` quando algum falha.
 
 **Ver a apresentação web**
 
@@ -254,9 +256,8 @@ A base de modelagem e estruturas de dados está pronta (~30%).
 
 ## Problemas conhecidos
 
-1. **Detecção de ciclo no `GrafoDependencias`.** O teste em `tests/TaskFlow.Tests` mostra que a dependência "1 depende de 5", que fecha um ciclo, é **aceita** (`True`) e a ordem de execução sai **vazia**. O resultado esperado é `False` e uma ordem preenchida. A correção virá em um PR próprio, separado desta reorganização.
-2. **O `ITaskFlowService` ainda não é usado pelas telas.** Hoje só o `TaskFlowMockService` o implementa; nenhuma `View` o chama. Além disso, os métodos são `void` e o mock imprime no console. Para a integração real, o contrato precisará **devolver dados** (por exemplo, listas de projetos) para as `Views` exibirem. Isso é uma **mudança de contrato**, a ser combinada entre a Pessoa A e a Pessoa B.
-3. **Documentação da Fase 1 com caminhos antigos** (veja a observação acima).
+1. **O `ITaskFlowService` ainda não é usado pelas telas.** Hoje só o `TaskFlowMockService` o implementa; nenhuma `View` o chama. Além disso, os métodos são `void` e o mock imprime no console. Para a integração real, o contrato precisará **devolver dados** (por exemplo, listas de projetos) para as `Views` exibirem. Isso é uma **mudança de contrato**, a ser combinada entre a Pessoa A e a Pessoa B.
+2. **Documentação da Fase 1 com caminhos antigos** (veja a observação acima).
 
 ## Trabalhando em dupla com Git
 
