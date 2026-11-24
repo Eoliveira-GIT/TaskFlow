@@ -39,3 +39,5 @@ var ordem = grafo.OrdenacaoTopologica(tarefas);
 Console.WriteLine(string.Join(" → ", ordem));
 
 Console.WriteLine("\nTeste finalizado!");
+
+return GrafoDependenciasTestes.Executar();

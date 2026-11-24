@@ -41,7 +41,7 @@ public class GrafoDependencias
     {
         // Simular a adição e vereficar se consegue chegar de volta
         var visitados = new HashSet<int>();
-        return ExisteCaminho(tarefaDependenciaId, tarefaId, visitados);
+       return ExisteCaminho(tarefaId, tarefaDependenciaId, visitados);
     }
 
     private bool ExisteCaminho(int atual, int destino, HashSet<int> visitados)
