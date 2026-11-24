@@ -8,13 +8,14 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #e0e0e0; min-height: 100vh; padding: 30px; }
         h1 { text-align: center; color: #667eea; margin-bottom: 30px; }
-        .box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; margin-bottom: 20px; max-width: 800px; margin-left: auto; margin-right: auto; }
+        .box { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 30px; margin-bottom: 20px; max-width: 820px; margin-left: auto; margin-right: auto; }
         .box h2 { color: #a78bfa; margin-bottom: 15px; }
         pre { background: #0f0c29; padding: 20px; border-radius: 8px; overflow-x: auto; border-left: 4px solid #667eea; }
-        pre code { font-family: 'Courier New', monospace; font-size: 0.9em; }
+        pre code { font-family: 'Courier New', monospace; font-size: 0.9em; white-space: pre; }
         .folder { color: #667eea; font-weight: bold; }
         .file { color: #a78bfa; }
         .cs { color: #4ade80; }
+        .new { color: #fbbf24; }
         .tag { display: inline-block; background: rgba(102,126,234,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.8em; color: #ddd; margin-left: 10px; }
         a { color: #667eea; }
         .back { display: inline-block; margin-top: 20px; padding: 10px 20px; background: linear-gradient(90deg, #667eea, #764ba2); color: #fff; text-decoration: none; border-radius: 8px; }
@@ -22,39 +23,79 @@
 </head>
 <body>
     <h1>📂 Estrutura Detalhada do Projeto</h1>
+
     <div class="box">
-        <h2>TaskFlow.sln</h2>
-        <p>Solution que contém ambos os projetos.</p>
-        <pre><code>&lt;span class="folder"&gt;TaskFlow.sln&lt;/span&gt;</code></pre>
+        <h2>Raiz</h2>
+        <p>Uma única solution; código em <code>src/</code>, testes em <code>tests/</code> e documentação em <code>docs/</code>.</p>
+        <pre><code><span class="folder">TaskFlow.sln</span>
+<span class="folder">README.md</span>
+<span class="folder">.gitignore</span>
+├── <span class="folder">src/</span>
+├── <span class="folder">tests/</span>
+└── <span class="folder">docs/</span></code></pre>
     </div>
+
     <div class="box">
-        <h2>TaskFlow.Domain/ <span class="tag">Pessoa A — Backend/Core</span></h2>
-        <p>Contém toda a lógica de negócio, estruturas de dados e algoritmos.</p>
-        <pre><code>&lt;span class="folder"&gt;TaskFlow.Domain/&lt;/span&gt;
-├── <span class="file cs">GrafoDependencias.cs</span>  ← List&lt;Dependencia&gt;, AdicionarDependencia, ObterPredecessoras
-├── <span class="file cs">FilaPrioridade.cs</span>    ← Fila de execução de tarefas
-├── <span class="file cs">PilhaUndo.cs</span>       ← Histórico de ações para Undo
-├── <span class="file cs">Projeto.cs</span>         ← Modelo de projeto
-├── <span class="file cs">Tarefa.cs</span>          ← Modelo de tarefa
-└── <span class="file cs">TarefaFinanceira.cs</span>  ← Modelo financeiro</code></pre>
+        <h2>src/TaskFlow.Domain/ <span class="tag">Pessoa A — Backend/Core</span></h2>
+        <p>Entidades, enums e estruturas de dados. Não depende de ninguém.</p>
+        <pre><code><span class="folder">src/TaskFlow.Domain/</span>
+├── <span class="file cs">GrafoDependencias.cs</span>  ← Dependências, ciclo, ordem topológica
+├── <span class="file cs">FilaPrioridade.cs</span>    ← Fila de execução
+├── <span class="file cs">PilhaUndo.cs</span>        ← Histórico para Undo
+├── <span class="file cs">Projeto.cs</span>          ← Modelo de projeto
+├── <span class="file cs">Tarefa.cs</span>           ← Modelo de tarefa
+├── <span class="file cs">TarefaFinanceira.cs</span>  ← Modelo financeiro
+├── <span class="file cs">Dependencia.cs</span>      ← Ligação tarefa → predecessora
+├── <span class="file cs">HistoricoAcao.cs</span>    ← Registro de ação
+└── <span class="file cs">StatusTarefa.cs</span> / <span class="file cs">StatusFinanceiro.cs</span> / <span class="file cs">TipoFinanceiro.cs</span></code></pre>
     </div>
+
     <div class="box">
-        <h2>TaskFlow.App/ <span class="tag">Pessoa B — UI/Interface</span></h2>
-        <pre><code>&lt;span class="folder"&gt;TaskFlow.App/&lt;/span&gt;
-├── <span class="file">Program.cs</span>                              ← Ponto de entrada
-├── <span class="file">TaskFlow.App.csproj</span>                  ← Configuração do projeto
-├── <span class="folder">Services/</span>
-│   └── <span class="file cs">ITaskFlowService.cs</span>             ← Contrato de integração
+        <h2>src/TaskFlow.Application/ <span class="tag">Pessoa A — Contrato</span></h2>
+        <p>Contratos compartilhados entre back end e interface.</p>
+        <pre><code><span class="folder">src/TaskFlow.Application/</span>
+└── <span class="file cs">ITaskFlowService.cs</span>   ← Contrato (namespace TaskFlow.Application)</code></pre>
+    </div>
+
+    <div class="box">
+        <h2>src/TaskFlow.App/ <span class="tag">Pessoa B — UI/Interface</span></h2>
+        <pre><code><span class="folder">src/TaskFlow.App/</span>
+├── <span class="file">Program.cs</span>                          ← Ponto de entrada
+├── <span class="file">TaskFlow.App.csproj</span>                 ← Referencia TaskFlow.Application
 ├── <span class="folder">Navigation/</span>
-│   └── <span class="file cs">MenuNavigator.cs</span>              ← Menu principal + loop
+│   └── <span class="file cs">MenuNavigator.cs</span>               ← Menu principal + loop
 ├── <span class="folder">Views/</span>
-│   ├── <span class="file cs">DashboardView.cs</span>             ← Resumo financeiro + tarefas
-│   ├── <span class="file cs">KanbanView.cs</span>              ← Quadro Kanban visual
-│   ├── <span class="file cs">FinanceiroView.cs</span>          ← Tabela de contas + saldo
-│   └── <span class="file cs">GrafoDependenciasView.cs</span>    ← Mapa de predecessoras
+│   ├── <span class="file cs">DashboardView.cs</span>              ← Resumo financeiro + tarefas
+│   ├── <span class="file cs new">ProjetosView.cs</span>               ← Lista/cria/abre projetos (novo)
+│   ├── <span class="file cs">KanbanView.cs</span>                 ← Quadro + nova tarefa/mover status
+│   ├── <span class="file cs">FinanceiroView.cs</span>             ← Contas + pagar/nova conta
+│   └── <span class="file cs">GrafoDependenciasView.cs</span>       ← Mapa de predecessoras
 └── <span class="folder">MockServices/</span>
-    └── <span class="file cs">TaskFlowMockService.cs</span>       ← Mock do serviço</code></pre>
+    ├── <span class="file cs">TaskFlowMockService.cs</span>        ← Implementa ITaskFlowService
+    ├── <span class="file cs new">MockModels.cs</span>                 ← Modelos em memória (novo)
+    └── <span class="file cs new">MockDataStore.cs</span>              ← Store in-memory + undo (novo)</code></pre>
     </div>
+
+    <div class="box">
+        <h2>tests/TaskFlow.Tests/ <span class="tag">Pessoa A</span></h2>
+        <pre><code><span class="folder">tests/TaskFlow.Tests/</span>
+├── <span class="file">Program.cs</span>                        ← Teste do Grafo de Dependências
+└── <span class="file">TaskFlow.Tests.csproj</span></code></pre>
+    </div>
+
+    <div class="box">
+        <h2>docs/</h2>
+        <pre><code><span class="folder">docs/</span>
+├── <span class="file">CHECKLIST_FASE1_PessoaB.md</span>       ← Checklist atualizado
+├── <span class="file new">CONTINUACAO_PESSOA_A.md</span>          ← Plano de validação/continuação (novo)
+└── <span class="folder">Apresentacao_Web/</span>
+    ├── <span class="file">index.html</span>
+    ├── <span class="file">estrutura.html</span>
+    ├── <span class="file">checklist.html</span>
+    ├── <span class="file">taskflow_app.html</span>
+    └── <span class="file">taskflow_docs.html</span></code></pre>
+    </div>
+
     <a href="index.html" class="back">← Voltar à Apresentação Principal</a>
 </body>
 </html>
