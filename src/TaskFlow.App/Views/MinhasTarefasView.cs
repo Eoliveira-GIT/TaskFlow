@@ -1,24 +1,35 @@
 using System;
 using System.Linq;
-using TaskFlow.App.MockServices;
+using TaskFlow.Application;
+using TaskFlow.Domain;
+using static TaskFlow.App.Views.Formatacao;
+using static TaskFlow.App.Views.Saida;
 
 namespace TaskFlow.App.Views
 {
-    public static class MinhasTarefasView
+    public class MinhasTarefasView
     {
-        public static void Renderizar()
+        private readonly ITaskFlowService _service;
+
+        public MinhasTarefasView(ITaskFlowService service)
         {
-            MockDataStore.Inicializar();
-            bool voltar = false;
+            _service = service;
+        }
 
-            while (!voltar)
+        public void Renderizar()
+        {
+            while (true)
             {
-                try { Console.Clear(); } catch { }
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine(">>> MINHAS TAREFAS <<<\n");
-                Console.ResetColor();
+                LimparTela();
+                Titulo("MINHAS TAREFAS", ConsoleColor.Cyan);
 
-                var responsaveis = MockDataStore.Responsaveis().ToList();
+                var responsaveis = _service.ListarTarefas()
+                    .Where(t => !string.IsNullOrWhiteSpace(t.Responsavel))
+                    .Select(t => t.Responsavel!)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(r => r)
+                    .ToList();
+
                 if (responsaveis.Count == 0)
                 {
                     Console.WriteLine("Nenhum responsável cadastrado ainda.");
@@ -28,62 +39,48 @@ namespace TaskFlow.App.Views
 
                 Console.WriteLine("Responsáveis disponíveis: " + string.Join(", ", responsaveis));
                 Console.Write("\nNome do responsável (Enter para voltar): ");
-                var resp = Console.ReadLine()?.Trim();
+                var nome = Console.ReadLine()?.Trim();
 
-                if (string.IsNullOrWhiteSpace(resp))
-                {
-                    voltar = true;
-                    break;
-                }
+                if (string.IsNullOrWhiteSpace(nome))
+                    return;
 
-                var tarefas = MockDataStore.TarefasDoResponsavel(resp).ToList();
+                // Pendentes do responsável, do prazo mais próximo para o mais distante (sem prazo por último).
+                var tarefas = _service.ListarTarefas()
+                    .Where(t => string.Equals(t.Responsavel, nome, StringComparison.OrdinalIgnoreCase)
+                                && t.Status != StatusTarefa.Done)
+                    .OrderBy(t => t.Prazo ?? DateTime.MaxValue)
+                    .ThenBy(t => t.Prioridade)
+                    .ToList();
+
                 Console.WriteLine();
-
                 if (tarefas.Count == 0)
                 {
-                    Console.WriteLine($"Nenhuma tarefa pendente para '{resp}'.");
+                    Console.WriteLine($"Nenhuma tarefa pendente para '{nome}'.");
                     Pausar();
                     continue;
                 }
 
-                Console.WriteLine(string.Format("{0,-4} {1,-22} {2,-30} {3,-8} {4,-8} {5,-12}",
-                    "ID", "Projeto", "Tarefa", "Prio.", "Prazo", "Status"));
-                Console.WriteLine(new string('-', 92));
+                Console.WriteLine(string.Format("{0,-4} {1,-20} {2,-26} {3,-10} {4,-6} {5,-13} {6}",
+                    "ID", "Projeto", "Tarefa", "Prioridade", "Prazo", "Status", "Situação"));
+                Console.WriteLine(new string('-', 100));
 
                 foreach (var t in tarefas)
                 {
-                    var projeto = MockDataStore.ObterProjeto(t.ProjetoId)?.Nome ?? "?";
-                    Console.ForegroundColor = MockDataStore.TarefaAtrasada(t) ? ConsoleColor.Red : ConsoleColor.Gray;
-                    Console.WriteLine(string.Format("{0,-4} {1,-22} {2,-30} {3,-8} {4,-8} {5,-12}",
-                        t.Id,
-                        Truncar(projeto, 22),
-                        Truncar(t.Titulo, 30),
-                        MockDataStore.RotuloPrioridade(t.Prioridade),
-                        t.Prazo.ToString("dd/MM"),
-                        MockDataStore.RotuloStatus(t.Status)));
+                    var projeto = _service.ObterProjeto(t.ProjetoId)?.Nome ?? "?";
+                    Console.ForegroundColor = Atrasada(t) ? ConsoleColor.Red : ConsoleColor.Gray;
+                    Console.WriteLine(string.Format("{0,-4} {1,-20} {2,-26} {3,-10} {4,-6} {5,-13} {6}",
+                        t.Id, Truncar(projeto, 20), Truncar(t.Titulo, 26), Prioridade(t.Prioridade),
+                        Prazo(t.Prazo), Status(t.Status), Situacao(_service, t)));
                     Console.ResetColor();
                 }
 
-                var atrasadas = tarefas.Count(MockDataStore.TarefaAtrasada);
+                var atrasadas = tarefas.Count(Atrasada);
                 Console.ForegroundColor = atrasadas > 0 ? ConsoleColor.Red : ConsoleColor.Green;
                 Console.WriteLine($"\nTotal: {tarefas.Count} tarefa(s) | Atrasadas: {atrasadas}");
                 Console.ResetColor();
 
                 Pausar();
             }
-        }
-
-        private static string Truncar(string texto, int max)
-        {
-            if (texto.Length <= max)
-                return texto;
-            return texto.Substring(0, max - 1) + "…";
-        }
-
-        private static void Pausar()
-        {
-            Console.WriteLine("\nPressione Enter para continuar...");
-            Console.ReadLine();
         }
     }
 }

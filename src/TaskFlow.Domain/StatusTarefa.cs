@@ -6,5 +6,5 @@ public enum StatusTarefa
     InProgress = 1,
     Review = 2,
     Done = 3,
-    Bloqueada = 4,
+    Bloqueada = 4
 }

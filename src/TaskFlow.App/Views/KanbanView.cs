@@ -1,104 +1,81 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TaskFlow.App.MockServices;
 using TaskFlow.App.Navigation;
+using TaskFlow.Application;
+using TaskFlow.Domain;
+using static TaskFlow.App.Views.Formatacao;
+using static TaskFlow.App.Views.Saida;
 
 namespace TaskFlow.App.Views
 {
-    public static class KanbanView
+    public class KanbanView
     {
-        private const int Largura = 24;
+        private const int Largura = 20;
 
-        public static void Renderizar(int projetoId)
+        private static readonly StatusTarefa[] Colunas =
         {
-            MockDataStore.Inicializar();
-            var projeto = MockDataStore.ObterProjeto(projetoId);
-            if (projeto == null)
-            {
-                Console.WriteLine("Projeto não encontrado.");
-                Console.ReadLine();
-                return;
-            }
+            StatusTarefa.ToDo,
+            StatusTarefa.InProgress,
+            StatusTarefa.Review,
+            StatusTarefa.Done,
+            StatusTarefa.Bloqueada
+        };
 
-            string? filtroResponsavel = null;
-            PrioridadeMock? filtroPrioridade = null;
-            string? filtroTexto = null;
+        private readonly ITaskFlowService _service;
+
+        // Filtros ficam ativos enquanto o quadro estiver aberto.
+        private string? _filtroResponsavel;
+        private int? _filtroPrioridade;
+        private string? _filtroTexto;
+
+        public KanbanView(ITaskFlowService service)
+        {
+            _service = service;
+        }
+
+        public void Renderizar(int projetoId)
+        {
             bool voltar = false;
 
             while (!voltar)
             {
-                try { Console.Clear(); } catch { }
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($">>> QUADRO KANBAN - {projeto.Nome} <<<\n");
-                Console.ResetColor();
-
-                var filtros = new List<string>();
-                if (filtroResponsavel != null) filtros.Add($"responsável={filtroResponsavel}");
-                if (filtroPrioridade != null) filtros.Add($"prioridade={MockDataStore.RotuloPrioridade(filtroPrioridade.Value)}");
-                if (filtroTexto != null) filtros.Add($"busca=\"{filtroTexto}\"");
-                if (filtros.Count > 0)
+                // O projeto pode ter sido removido/renomeado: busca de novo a cada volta.
+                var projeto = _service.ObterProjeto(projetoId);
+                if (projeto == null)
                 {
-                    Console.ForegroundColor = ConsoleColor.DarkCyan;
-                    Console.WriteLine("Filtro ativo: " + string.Join(", ", filtros));
-                    Console.ResetColor();
+                    EntradaUsuario.Erro("Projeto não encontrado.");
+                    Pausar();
+                    return;
                 }
 
-                var tarefasProjeto = MockDataStore.Tarefas.Where(t => t.ProjetoId == projetoId);
-                if (filtroResponsavel != null)
-                    tarefasProjeto = tarefasProjeto.Where(t => string.Equals(t.Responsavel, filtroResponsavel, StringComparison.OrdinalIgnoreCase));
-                if (filtroPrioridade != null)
-                    tarefasProjeto = tarefasProjeto.Where(t => t.Prioridade == filtroPrioridade.Value);
-                if (filtroTexto != null)
-                {
-                    tarefasProjeto = tarefasProjeto.Where(t =>
-                        t.Titulo.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase) ||
-                        (t.Responsavel != null && t.Responsavel.Contains(filtroTexto, StringComparison.OrdinalIgnoreCase)));
-                }
+                LimparTela();
+                Titulo($"QUADRO KANBAN - {projeto.Nome}", ConsoleColor.Yellow);
+                MostrarFiltros();
 
-                ImprimirColunas(tarefasProjeto.ToList());
+                ImprimirColunas(AplicarFiltros(_service.ListarTarefas(projetoId)));
 
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine("\nCores: verde=concluída  amarelo=em andamento  magenta=bloqueada  vermelho=atrasada (!)");
+                Console.WriteLine("\nMarcas: ! = atrasada   * = aguardando dependência");
+                Console.WriteLine("Cores: verde=concluída  amarelo=em andamento  ciano=revisão  magenta=bloqueada  vermelho=atrasada  cinza-escuro=aguardando");
                 Console.ResetColor();
 
-                Console.WriteLine("\n[N] Nova Tarefa | [M] Mover Status | [E] Editar | [R] Remover | [F] Filtrar | [B] Buscar | [V] Voltar");
+                Console.WriteLine("\n[N] Nova | [M] Mover | [E] Editar | [R] Remover | [D] Detalhes | [F] Filtrar | [B] Buscar | [V] Voltar");
                 Console.Write("Comando: ");
                 var cmd = Console.ReadLine()?.Trim().ToUpper();
 
                 switch (cmd)
                 {
-                    case "N":
-                        NovaTarefa(projetoId);
-                        break;
-                    case "M":
-                        MoverStatus();
-                        break;
-                    case "E":
-                        EditarTarefa();
-                        break;
-                    case "R":
-                        RemoverTarefa();
-                        break;
-                    case "F":
-                        Console.Write("Filtrar por responsável (Enter = todos): ");
-                        var fr = Console.ReadLine()?.Trim();
-                        filtroResponsavel = string.IsNullOrWhiteSpace(fr) ? null : fr;
-
-                        Console.Write("Filtrar por prioridade [1] Baixa [2] Média [3] Alta (Enter = todas): ");
-                        var fp = Console.ReadLine()?.Trim();
-                        filtroPrioridade = fp == "1" ? PrioridadeMock.Baixa
-                                         : fp == "2" ? PrioridadeMock.Media
-                                         : fp == "3" ? PrioridadeMock.Alta
-                                         : (PrioridadeMock?)null;
-                        break;
-                    case "B":
-                        Console.Write("Buscar por texto no título/responsável (Enter limpa): ");
-                        var ft = Console.ReadLine()?.Trim();
-                        filtroTexto = string.IsNullOrWhiteSpace(ft) ? null : ft;
-                        break;
+                    case "N": NovaTarefa(projetoId); break;
+                    case "M": MoverStatus(projetoId); break;
+                    case "E": EditarTarefa(projetoId); break;
+                    case "R": RemoverTarefa(projetoId); break;
+                    case "D": Detalhes(projetoId); break;
+                    case "F": Filtrar(); break;
+                    case "B": Buscar(); break;
                     case "V":
                     case "":
+                    case null: // fim da entrada (Ctrl+Z ou entrada redirecionada)
                         voltar = true;
                         break;
                     default:
@@ -109,137 +86,241 @@ namespace TaskFlow.App.Views
             }
         }
 
-        private static void ImprimirColunas(List<TarefaMock> tarefas)
+        // ---------------------------------------------------------------
+        // Quadro
+        // ---------------------------------------------------------------
+
+        private void MostrarFiltros()
         {
-            var colunas = new[]
+            var filtros = new List<string>();
+            if (_filtroResponsavel != null) filtros.Add($"responsável={_filtroResponsavel}");
+            if (_filtroPrioridade != null) filtros.Add($"prioridade={Prioridade(_filtroPrioridade.Value)}");
+            if (_filtroTexto != null) filtros.Add($"busca=\"{_filtroTexto}\"");
+            if (filtros.Count == 0)
+                return;
+
+            Console.ForegroundColor = ConsoleColor.DarkCyan;
+            Console.WriteLine("Filtro ativo: " + string.Join(", ", filtros));
+            Console.ResetColor();
+        }
+
+        private List<Tarefa> AplicarFiltros(IEnumerable<Tarefa> tarefas)
+        {
+            if (_filtroResponsavel != null)
             {
-                StatusTarefaMock.AFazer,
-                StatusTarefaMock.EmAndamento,
-                StatusTarefaMock.Concluida,
-                StatusTarefaMock.Bloqueada
+                var responsavel = _filtroResponsavel;
+                tarefas = tarefas.Where(t => string.Equals(t.Responsavel, responsavel, StringComparison.OrdinalIgnoreCase));
+            }
+            if (_filtroPrioridade != null)
+            {
+                var prioridade = _filtroPrioridade.Value;
+                tarefas = tarefas.Where(t => t.Prioridade == prioridade);
+            }
+            if (_filtroTexto != null)
+            {
+                var texto = _filtroTexto;
+                tarefas = tarefas.Where(t =>
+                    t.Titulo.Contains(texto, StringComparison.OrdinalIgnoreCase) ||
+                    (t.Responsavel != null && t.Responsavel.Contains(texto, StringComparison.OrdinalIgnoreCase)));
+            }
+            return tarefas.ToList();
+        }
+
+        private void ImprimirColunas(List<Tarefa> tarefas)
+        {
+            Console.WriteLine(string.Join(" | ", Colunas.Select(c => $"[ {Status(c).ToUpper()} ]".PadRight(Largura))));
+            Console.WriteLine(new string('-', Largura * Colunas.Length + 3 * (Colunas.Length - 1)));
+
+            var porColuna = Colunas
+                .Select(c => tarefas.Where(t => t.Status == c).OrderBy(t => t.Prioridade).ToList())
+                .ToList();
+
+            var linhas = Math.Max(1, porColuna.Max(l => l.Count));
+            for (int i = 0; i < linhas; i++)
+            {
+                for (int c = 0; c < porColuna.Count; c++)
+                {
+                    var lista = porColuna[c];
+                    if (i < lista.Count)
+                    {
+                        var t = lista[i];
+                        Console.ForegroundColor = CorTarefa(t);
+                        Console.Write(Truncar(RotuloCelula(t), Largura).PadRight(Largura));
+                        Console.ResetColor();
+                    }
+                    else
+                    {
+                        Console.Write(new string(' ', Largura));
+                    }
+
+                    if (c < porColuna.Count - 1)
+                        Console.Write(" | ");
+                }
+                Console.WriteLine();
+            }
+        }
+
+        private string RotuloCelula(Tarefa t)
+        {
+            // As marcas vão no início para não sumirem quando o título for truncado.
+            var marcas = string.Empty;
+            if (Atrasada(t)) marcas += "!";
+            if (EstaAguardando(t)) marcas += "*";
+            return marcas.Length > 0 ? $"{marcas} #{t.Id} {t.Titulo}" : $"#{t.Id} {t.Titulo}";
+        }
+
+        private ConsoleColor CorTarefa(Tarefa t)
+        {
+            if (t.Status == StatusTarefa.Done) return ConsoleColor.Green;
+            if (t.Status == StatusTarefa.Bloqueada) return ConsoleColor.Magenta;
+            if (Atrasada(t)) return ConsoleColor.Red;
+            if (EstaAguardando(t)) return ConsoleColor.DarkGray;
+            return t.Status switch
+            {
+                StatusTarefa.InProgress => ConsoleColor.Yellow,
+                StatusTarefa.Review => ConsoleColor.Cyan,
+                _ => ConsoleColor.Gray
             };
-
-            Console.WriteLine(string.Join(" | ", new[]
-            {
-                "[ A FAZER ]".PadRight(Largura),
-                "[ EM ANDAMENTO ]".PadRight(Largura),
-                "[ CONCLUÍDA ]".PadRight(Largura),
-                "[ BLOQUEADA ]".PadRight(Largura)
-            }));
-            Console.WriteLine(new string('-', Largura * 4 + 9));
-
-            var porStatus = colunas.Select(s => tarefas.Where(t => t.Status == s).ToList()).ToList();
-            var maxLinhas = porStatus.Max(l => l.Count);
-            if (maxLinhas == 0)
-                maxLinhas = 1;
-
-            for (int i = 0; i < maxLinhas; i++)
-            {
-                var celulas = porStatus.Select(l => i < l.Count ? l[i] : null).ToArray();
-                EscreverLinha(celulas);
-            }
         }
 
-        private static void EscreverLinha(TarefaMock?[] celulas)
-        {
-            for (int i = 0; i < celulas.Length; i++)
-            {
-                var c = celulas[i];
-                if (c == null)
-                {
-                    Console.ResetColor();
-                    Console.Write(new string(' ', Largura));
-                }
-                else
-                {
-                    Console.ForegroundColor = CorTarefa(c);
-                    Console.Write(Truncar(Rotulo(c)).PadRight(Largura));
-                    Console.ResetColor();
-                }
+        private bool EstaAguardando(Tarefa t)
+            => t.Status != StatusTarefa.Done && _service.ObterPredecessorasPendentes(t.Id).Count > 0;
 
-                if (i < celulas.Length - 1)
-                {
-                    Console.ResetColor();
-                    Console.Write(" | ");
-                }
-            }
-            Console.WriteLine();
-        }
+        // ---------------------------------------------------------------
+        // Comandos
+        // ---------------------------------------------------------------
 
-        private static string Rotulo(TarefaMock t)
-        {
-            var s = $"#{t.Id} {t.Titulo}";
-            if (!string.IsNullOrWhiteSpace(t.Responsavel))
-                s += $" ({t.Responsavel})";
-            if (MockDataStore.TarefaAtrasada(t))
-                s += " !";
-            return s;
-        }
-
-        private static ConsoleColor CorTarefa(TarefaMock t)
-        {
-            if (t.Status == StatusTarefaMock.Bloqueada) return ConsoleColor.Magenta;
-            if (MockDataStore.TarefaAtrasada(t)) return ConsoleColor.Red;
-            switch (t.Status)
-            {
-                case StatusTarefaMock.Concluida: return ConsoleColor.Green;
-                case StatusTarefaMock.EmAndamento: return ConsoleColor.Yellow;
-                default: return ConsoleColor.Gray;
-            }
-        }
-
-        private static string Truncar(string texto, int max = Largura)
-        {
-            if (texto.Length <= max)
-                return texto;
-            return texto.Substring(0, max - 1) + "…";
-        }
-
-        private static void NovaTarefa(int projetoId)
+        private void NovaTarefa(int projetoId)
         {
             var titulo = EntradaUsuario.LerTextoObrigatorio("Título da tarefa: ");
+            var descricao = EntradaUsuario.LerTextoOpcional("Descrição (Enter = sem descrição): ", string.Empty);
+            var prioridade = EntradaUsuario.LerPrioridade("Prioridade 1 (urgente) a 5 (mínima) (Enter = 3): ", 3);
+            var prazo = EntradaUsuario.LerDataOpcional("Prazo dd/MM/aaaa (Enter = sem prazo): ", null);
+            var responsavel = EntradaUsuario.LerTextoOpcional("Responsável (Enter = sem responsável): ", string.Empty);
 
-            var prioridade = LerPrioridade("Prioridade [1] Baixa  [2] Média  [3] Alta (Enter = Média): ", PrioridadeMock.Media);
-            var prazo = EntradaUsuario.LerData("Prazo (dd/MM/aaaa, Enter = 7 dias): ", DateTime.Today.AddDays(7));
-
-            Console.Write("Responsável (Enter = sem responsável): ");
-            var responsavel = Console.ReadLine()?.Trim();
-            if (string.IsNullOrWhiteSpace(responsavel))
-                responsavel = null;
-
-            var tarefa = MockDataStore.AdicionarTarefa(projetoId, titulo, prioridade, prazo, responsavel);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Tarefa #{tarefa.Id} '{tarefa.Titulo}' criada ({MockDataStore.RotuloPrioridade(prioridade)}, prazo {prazo:dd/MM/yyyy}, resp: {responsavel ?? "-"}).");
-            Console.ResetColor();
-            Pausar();
+            MostrarResultado(_service.CriarTarefa(projetoId, titulo, descricao, responsavel, prioridade, prazo));
         }
 
-        private static void MoverStatus()
+        private void MoverStatus(int projetoId)
         {
-            var id = EntradaUsuario.LerInteiro("ID da tarefa (Enter para cancelar): ");
-            if (id == 0)
+            var tarefa = LerTarefaDoProjeto(projetoId);
+            if (tarefa == null)
                 return;
 
-            if (!MockDataStore.Tarefas.Any(t => t.Id == id))
-            {
-                EntradaUsuario.Erro("Tarefa não encontrada.");
-                Pausar();
-                return;
-            }
-
-            Console.WriteLine("Novo status: [1] A Fazer  [2] Em Andamento  [3] Concluída  [4] Bloqueada");
+            Console.WriteLine($"Status atual: {Status(tarefa.Status)}");
+            Console.WriteLine("Novo status: [1] A Fazer  [2] Em Andamento  [3] Em Revisão  [4] Concluída  [5] Bloqueada");
             var novo = LerStatus();
             if (novo == null)
                 return;
 
-            MockDataStore.MoverStatus(id, novo.Value);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Tarefa #{id} movida para '{MockDataStore.RotuloStatus(novo.Value)}'.");
-            Console.ResetColor();
+            // O serviço recusa avançar se houver predecessora não concluída e explica o motivo.
+            MostrarResultado(_service.MudarStatusTarefa(tarefa.Id, novo.Value));
+        }
+
+        private void EditarTarefa(int projetoId)
+        {
+            var t = LerTarefaDoProjeto(projetoId);
+            if (t == null)
+                return;
+
+            var titulo = EntradaUsuario.LerTextoOpcional($"Título [{t.Titulo}]: ", t.Titulo);
+            var descricao = EntradaUsuario.LerTextoOpcionalOuLimpar(
+                $"Descrição [{t.Descricao ?? "-"}] (Enter mantém, '-' apaga): ", t.Descricao);
+            var prioridade = EntradaUsuario.LerPrioridade(
+                $"Prioridade 1-5 (atual {Prioridade(t.Prioridade)}, Enter mantém): ", t.Prioridade);
+            var prazo = EntradaUsuario.LerDataOpcional(
+                $"Prazo (atual {Prazo(t.Prazo, "dd/MM/yyyy")}, Enter mantém, '-' tira o prazo): ", t.Prazo);
+            var responsavel = EntradaUsuario.LerTextoOpcionalOuLimpar(
+                $"Responsável (atual {Responsavel(t)}, Enter mantém, '-' tira): ", t.Responsavel);
+
+            MostrarResultado(_service.EditarTarefa(t.Id, titulo, descricao, responsavel, prioridade, prazo));
+        }
+
+        private void RemoverTarefa(int projetoId)
+        {
+            var t = LerTarefaDoProjeto(projetoId);
+            if (t == null)
+                return;
+
+            if (!EntradaUsuario.Confirmar($"Remover a tarefa #{t.Id} '{t.Titulo}' e as dependências dela? (s/n): "))
+                return;
+
+            MostrarResultado(_service.RemoverTarefa(t.Id));
+        }
+
+        private void Detalhes(int projetoId)
+        {
+            var t = LerTarefaDoProjeto(projetoId);
+            if (t == null)
+                return;
+
+            var predecessoras = _service.ObterPredecessores(t.Id);
+            var sucessoras = _service.ListarTarefas()
+                .Where(x => _service.ObterPredecessores(x.Id).Contains(t.Id))
+                .Select(x => x.Id)
+                .ToList();
+
+            Console.WriteLine();
+            Console.WriteLine($"Tarefa #{t.Id}: {t.Titulo}");
+            Console.WriteLine($"  Descrição:    {t.Descricao ?? "-"}");
+            Console.WriteLine($"  Responsável:  {Responsavel(t)}");
+            Console.WriteLine($"  Prioridade:   {Prioridade(t.Prioridade)}");
+            Console.WriteLine($"  Prazo:        {Prazo(t.Prazo, "dd/MM/yyyy")}{(Atrasada(t) ? "  (ATRASADA)" : string.Empty)}");
+            Console.WriteLine($"  Status:       {Status(t.Status)}");
+            Console.WriteLine($"  Depende de:   {(predecessoras.Count == 0 ? "-" : DescreverTarefas(predecessoras))}");
+            Console.WriteLine($"  Libera:       {(sucessoras.Count == 0 ? "-" : DescreverTarefas(sucessoras))}");
+            Console.WriteLine($"  Situação:     {Situacao(_service, t)}");
             Pausar();
         }
 
-        private static StatusTarefaMock? LerStatus()
+        private void Filtrar()
+        {
+            Console.Write("Filtrar por responsável (Enter = todos): ");
+            var responsavel = Console.ReadLine()?.Trim();
+            _filtroResponsavel = string.IsNullOrWhiteSpace(responsavel) ? null : responsavel;
+
+            Console.Write("Filtrar por prioridade 1-5 (Enter = todas): ");
+            var texto = Console.ReadLine()?.Trim();
+            _filtroPrioridade = int.TryParse(texto, out var p) && p >= 1 && p <= 5 ? p : null;
+        }
+
+        private void Buscar()
+        {
+            Console.Write("Buscar por texto no título/responsável (Enter limpa): ");
+            var texto = Console.ReadLine()?.Trim();
+            _filtroTexto = string.IsNullOrWhiteSpace(texto) ? null : texto;
+        }
+
+        // ---------------------------------------------------------------
+        // Auxiliares
+        // ---------------------------------------------------------------
+
+        // Só aceita tarefas do projeto aberto no quadro.
+        private Tarefa? LerTarefaDoProjeto(int projetoId)
+        {
+            var id = EntradaUsuario.LerInteiro("ID da tarefa (Enter para cancelar): ");
+            if (id == 0)
+                return null;
+
+            var tarefa = _service.ObterTarefa(id);
+            if (tarefa == null || tarefa.ProjetoId != projetoId)
+            {
+                EntradaUsuario.Erro("Tarefa não encontrada neste projeto.");
+                Pausar();
+                return null;
+            }
+            return tarefa;
+        }
+
+        // "#1 Configurar DB (Concluída), #3 Tela de Login (A Fazer)"
+        private string DescreverTarefas(IEnumerable<int> ids)
+            => string.Join(", ", ids.Select(id =>
+            {
+                var tarefa = _service.ObterTarefa(id);
+                return tarefa == null ? $"#{id} (removida)" : $"#{id} {tarefa.Titulo} ({Status(tarefa.Status)})";
+            }));
+
+        private static StatusTarefa? LerStatus()
         {
             while (true)
             {
@@ -248,96 +329,19 @@ namespace TaskFlow.App.Views
 
                 switch (op)
                 {
-                    case "1": return StatusTarefaMock.AFazer;
-                    case "2": return StatusTarefaMock.EmAndamento;
-                    case "3": return StatusTarefaMock.Concluida;
-                    case "4": return StatusTarefaMock.Bloqueada;
+                    case "1": return StatusTarefa.ToDo;
+                    case "2": return StatusTarefa.InProgress;
+                    case "3": return StatusTarefa.Review;
+                    case "4": return StatusTarefa.Done;
+                    case "5": return StatusTarefa.Bloqueada;
                     case "":
                     case null:
                         return null;
                     default:
-                        EntradaUsuario.Erro("Status inválido. Escolha de 1 a 4.");
+                        EntradaUsuario.Erro("Status inválido. Escolha de 1 a 5.");
                         break;
                 }
             }
-        }
-
-        private static void RemoverTarefa()
-        {
-            var id = EntradaUsuario.LerInteiro("ID da tarefa (Enter para cancelar): ");
-            if (id == 0)
-                return;
-
-            if (!MockDataStore.RemoverTarefa(id))
-            {
-                EntradaUsuario.Erro("Tarefa não encontrada.");
-                Pausar();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Tarefa #{id} removida (use [6] para desfazer).");
-            Console.ResetColor();
-            Pausar();
-        }
-
-        private static void EditarTarefa()
-        {
-            var id = EntradaUsuario.LerInteiro("ID da tarefa (Enter para cancelar): ");
-            if (id == 0)
-                return;
-
-            var t = MockDataStore.Tarefas.FirstOrDefault(x => x.Id == id);
-            if (t == null)
-            {
-                EntradaUsuario.Erro("Tarefa não encontrada.");
-                Pausar();
-                return;
-            }
-
-            var titulo = EntradaUsuario.LerTextoOpcional($"Título [{t.Titulo}]: ", t.Titulo);
-            var prioridade = LerPrioridade($"Prioridade [1/2/3] (atual {MockDataStore.RotuloPrioridade(t.Prioridade)}, Enter mantém): ", t.Prioridade);
-            var prazo = EntradaUsuario.LerData($"Prazo (atual {t.Prazo:dd/MM/yyyy}, Enter mantém): ", t.Prazo);
-
-            Console.Write($"Responsável (atual {t.Responsavel ?? "-"}, Enter mantém, '-' limpa): ");
-            var respTxt = Console.ReadLine()?.Trim();
-            string? responsavel = t.Responsavel;
-            if (!string.IsNullOrWhiteSpace(respTxt))
-                responsavel = respTxt == "-" ? null : respTxt;
-
-            MockDataStore.EditarTarefa(id, titulo, prioridade, prazo, responsavel);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Tarefa #{id} atualizada.");
-            Console.ResetColor();
-            Pausar();
-        }
-
-        private static PrioridadeMock LerPrioridade(string prompt, PrioridadeMock atual)
-        {
-            while (true)
-            {
-                Console.Write(prompt);
-                var txt = Console.ReadLine()?.Trim();
-
-                switch (txt)
-                {
-                    case "1": return PrioridadeMock.Baixa;
-                    case "2": return PrioridadeMock.Media;
-                    case "3": return PrioridadeMock.Alta;
-                    case "":
-                    case null:
-                        return atual;
-                    default:
-                        EntradaUsuario.Erro("Prioridade inválida. Escolha 1, 2 ou 3.");
-                        break;
-                }
-            }
-        }
-
-        private static void Pausar()
-        {
-            Console.WriteLine("\nPressione Enter para continuar...");
-            Console.ReadLine();
         }
     }
 }

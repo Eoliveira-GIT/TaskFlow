@@ -32,15 +32,31 @@ namespace TaskFlow.App.Views
                 else
                 {
                     foreach (var acao in historico)
-                        Console.WriteLine($"  • {acao.Descricao}");
+                    {
+                        // Ações vindas do banco não guardam como ser desfeitas.
+                        var sessaoAnterior = acao.Desfazer == null;
+                        Console.ForegroundColor = sessaoAnterior ? ConsoleColor.DarkGray : ConsoleColor.Gray;
+                        Console.WriteLine($"  • {acao.DataHora:dd/MM HH:mm}  {acao.Descricao}{(sessaoAnterior ? "  (sessão anterior)" : string.Empty)}");
+                        Console.ResetColor();
+                    }
                 }
 
                 // A "última ação" é a que o desfazer vai reverter: mostrar isso evita surpresa.
                 var ultima = _service.ObterUltimaAcao();
-                if (ultima != null)
+                if (ultima != null && ultima.Desfazer != null)
+                {
                     Console.WriteLine($"\n[D] Desfazer \"{ultima.Descricao}\" | [V] Voltar");
+                }
                 else
+                {
+                    if (ultima != null)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine("\nSó dá para desfazer ações feitas desde que o programa foi aberto.");
+                        Console.ResetColor();
+                    }
                     Console.WriteLine("\n[V] Voltar");
+                }
 
                 Console.Write("Comando: ");
                 var cmd = Console.ReadLine()?.Trim().ToUpper();
@@ -52,6 +68,7 @@ namespace TaskFlow.App.Views
                         break;
                     case "V":
                     case "":
+                    case null: // fim da entrada (Ctrl+Z ou entrada redirecionada)
                         voltar = true;
                         break;
                     default:

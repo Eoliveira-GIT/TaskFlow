@@ -155,27 +155,39 @@ TaskFlow/
 │   │   ├── TarefaFinanceira.cs
 │   │   └── TipoFinanceiro.cs
 │   │
-│   ├── TaskFlow.Application/       # Contratos (ITaskFlowService)
-│   │   └── ITaskFlowService.cs
+│   ├── TaskFlow.Application/       # Contrato e serviço real
+│   │   ├── ITaskFlowService.cs
+│   │   ├── TaskFlowService.cs      # Regras de negócio + undo; salva no SQLite a cada ação
+│   │   ├── SqliteDataStore.cs      # Persistência (Microsoft.Data.Sqlite)
+│   │   └── Resultado.cs            # Sucesso/erro dos comandos
 │   │
 │   └── TaskFlow.App/               # Aplicação de console (interface)
 │       ├── Program.cs
+│       ├── DadosExemplo.cs         # Dados de demonstração carregados ao abrir
 │       ├── Navigation/
-│       │   └── MenuNavigator.cs    # Loop principal e navegação
-│       ├── Views/
-│       │   ├── DashboardView.cs
-│       │   ├── KanbanView.cs
-│       │   ├── FinanceiroView.cs
-│       │   └── GrafoDependenciasView.cs
-│       └── MockServices/
-│           └── TaskFlowMockService.cs   # Simulação do back end
+│       │   ├── MenuNavigator.cs    # Loop principal; cria o único TaskFlowService
+│       │   └── EntradaUsuario.cs   # Leitura e validação de entradas
+│       └── Views/                  # Todas recebem ITaskFlowService no construtor
+│           ├── DashboardView.cs        # [1]
+│           ├── ProjetosView.cs         # [2]
+│           ├── KanbanView.cs           # [2] → abrir projeto
+│           ├── FilaPrioridadeView.cs   # [3]
+│           ├── GrafoDependenciasView.cs# [4] grafo real, ordem topológica, travadas
+│           ├── FinanceiroView.cs       # [5]
+│           ├── HistoricoView.cs        # [6]
+│           ├── MinhasTarefasView.cs    # [7]
+│           ├── Formatacao.cs           # Rótulos, moeda, prazo, atraso, situação
+│           └── Saida.cs                # Mensagens de resultado e pausa
 │
 ├── tests/
 │   └── TaskFlow.Tests/             # Console de teste do Domain
-│       └── Program.cs
+│       ├── Program.cs
+│       └── GrafoDependenciasTestes.cs
 │
 ├── docs/
 │   ├── CHECKLIST_FASE1_PessoaB.md
+│   ├── CONTINUACAO_PESSOA_B.md
+│   ├── README_PESSOA_B.md
 │   └── Apresentacao_Web/           # Painel visual interativo (HTML/CSS)
 │       ├── index.html
 │       ├── checklist.html
@@ -204,7 +216,7 @@ dotnet run --project src\TaskFlow.App\TaskFlow.App.csproj
 
 Ou, no Visual Studio / VS Code: abra `TaskFlow.sln`, defina `TaskFlow.App` como projeto de inicialização e pressione `F5` ou `Ctrl + F5`.
 
-**Rodar os teste do Domain**
+**Rodar os testes do Domain**
 
 ```powershell
 dotnet run --project tests\TaskFlow.Tests
@@ -234,16 +246,16 @@ Acesse `http://localhost:8000`.
 | Fila de prioridade (`FilaPrioridade`) | Feito          | Ordenar tarefas por prioridade |
 | Lista                                 | Feito          | Armazenamento geral            |
 | Árvore                                | Feito (básico) | Subtarefas                     |
-| SQLite                                | Falta          | Persistência dos dados         |
+| SQLite                                | Feito          | Persistência dos dados         |
 | Entity Framework / Dapper             | Falta          | Acesso ao banco                |
 | Python                                | Falta          | Automação e notificações       |
 
 ### Back end (Pessoa A)
 
 - **Feito:** classes `Projeto`, `Tarefa`, `TarefaFinanceira`, `HistoricoAcao`, `Dependencia`; enums `StatusTarefa`, `TipoFinanceiro`, `StatusFinanceiro`; as estruturas de dados acima; projeto de teste em console.
-- **Falta:** persistência, serviços na camada `Application`, CRUD completo, cálculos financeiros (salário livre, contas atrasadas etc.), integração real com a interface no lugar dos mocks, métodos extras do grafo (remover dependência, visualização em texto), scripts Python e testes mais completos.
-
-A base de modelagem e estruturas de dados está pronta (~30%).
+- **Feito também:** `TaskFlowService` (camada `Application`) com CRUD de projetos, tarefas e contas, dependências com detecção de ciclo, fila de prioridade, ordem de execução, cálculos financeiros e undo de todas as ações.
+- **Feito também:** persistência em SQLite (`SqliteDataStore`).
+- **Falta:** scripts Python e testes do `TaskFlowService`.
 
 ### Interface (Pessoa B) — Fase 1
 
@@ -256,8 +268,21 @@ A base de modelagem e estruturas de dados está pronta (~30%).
 
 ## Problemas conhecidos
 
-1. **O `ITaskFlowService` ainda não é usado pelas telas.** Hoje só o `TaskFlowMockService` o implementa; nenhuma `View` o chama. Além disso, os métodos são `void` e o mock imprime no console. Para a integração real, o contrato precisará **devolver dados** (por exemplo, listas de projetos) para as `Views` exibirem. Isso é uma **mudança de contrato**, a ser combinada entre a Pessoa A e a Pessoa B.
-2. **Documentação da Fase 1 com caminhos antigos** (veja a observação acima).
+1. **Undo só vale na sessão atual.** O histórico é salvo no banco, mas a forma de desfazer cada ação fica só em memória; ao reabrir o programa, as ações antigas aparecem como "(sessão anterior)" e não podem ser desfeitas.
+2. **Documentação da Fase 1 com caminhos antigos** (veja a observação acima). Os arquivos em `docs/` ainda citam o `MockDataStore`, removido na integração.
+
+## Integração com o serviço real
+
+Todas as telas usam o `ITaskFlowService`; o `MockServices/` foi removido.
+
+- O `MenuNavigator` cria **um único** `TaskFlowService` e passa para todas as telas: todas veem os mesmos dados e o `[6]` desfaz qualquer ação.
+- **Persistência:** os dados ficam em `taskflow.db`, ao lado do executável (ex.: `src\TaskFlow.App\bin\Debug\net8.0\taskflow.db`). Toda ação salva o estado completo; desfazer também salva.
+- No **primeiro uso** (banco vazio), `DadosExemplo.Carregar` cria projetos, tarefas, dependências e contas de demonstração pelo próprio serviço e limpa o histórico. Para recomeçar do zero, apague o `taskflow.db`.
+- **Prioridade:** segue o Domain, de 1 (urgente) a 5 (mínima).
+- **Kanban:** 5 colunas (inclui _Em Revisão_), `!` marca atrasada e `*` marca tarefa aguardando dependência; `[D]` mostra de quem a tarefa depende e quais ela libera.
+- **Grafo `[4]`:** lê o grafo real, mostra predecessoras de cada tarefa (✓ concluída / ✗ pendente), quais estão travadas e a ordem topológica; `[A]`/`[R]` adicionam e removem dependências, `[P]` filtra por projeto.
+- **Bloqueio:** o serviço recusa mover para _Em Andamento_, _Em Revisão_ ou _Concluída_ uma tarefa com predecessora pendente.
+- Duas consultas foram adicionadas ao contrato: `ObterPredecessorasPendentes` e `LimparHistorico`.
 
 ## Trabalhando em dupla com Git
 

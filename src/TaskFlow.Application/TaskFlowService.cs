@@ -1,3 +1,4 @@
+using System.Globalization;
 using TaskFlow.Domain;
 
 namespace TaskFlow.Application;
@@ -12,11 +13,59 @@ public class TaskFlowService : ITaskFlowService
     private readonly PilhaUndo _undo = new();
     private decimal _salario;
 
+    // Persistência SQLite: toda ação salva o estado completo no banco.
+    private readonly SqliteDataStore _store;
+
     // Contadores de id: só avançam, nunca reaproveitam (evita confundir o histórico)
     private int _proximoProjetoId = 1;
     private int _proximaTarefaId = 1;
     private int _proximaContaId = 1;
     private int _proximaAcaoId = 1;
+
+    public TaskFlowService(string? dbPath = null)
+    {
+        _store = new SqliteDataStore(dbPath);
+        CarregarDoBanco();
+    }
+
+    private void CarregarDoBanco()
+    {
+        var estado = _store.Carregar();
+
+        _projetos.AddRange(estado.Projetos);
+        _tarefas.AddRange(estado.Tarefas);
+        _contas.AddRange(estado.Contas);
+        _salario = estado.Salario;
+
+        _proximoProjetoId = estado.ProximoProjetoId;
+        _proximaTarefaId = estado.ProximaTarefaId;
+        _proximaContaId = estado.ProximaContaId;
+        _proximaAcaoId = estado.ProximaAcaoId;
+
+        foreach (var (tarefaId, depId) in estado.Dependencias)
+            _grafo.AdicionarDependencia(tarefaId, depId);
+
+        // Histórico descritivo (sem Action de undo: o undo só vale na sessão atual).
+        // O banco devolve do mais antigo para o mais novo (ORDER BY Id), que é exatamente
+        // a ordem de empilhar: assim a ação mais recente fica no topo da pilha.
+        foreach (var h in estado.Historico)
+            _undo.Empilhar(h);
+    }
+
+    private void Persistir()
+    {
+        _store.Salvar(
+            _projetos,
+            _tarefas,
+            _contas,
+            _grafo.ObterTodas(),
+            _salario,
+            _proximoProjetoId,
+            _proximaTarefaId,
+            _proximaContaId,
+            _proximaAcaoId,
+            _undo.ObterTodas());
+    }
 
     // =====================================================================
     // UTILIDADES PRIVADAS
@@ -36,7 +85,24 @@ public class TaskFlowService : ITaskFlowService
             EntidadeId = entidadeId,
             Desfazer = desfazer
         });
+        Persistir();
     }
+
+    private static readonly CultureInfo CulturaBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    // Valores em reais independentemente do idioma do Windows de quem roda.
+    private static string Moeda(decimal valor) => valor.ToString("C", CulturaBr);
+
+    // Nomes dos status em português para as mensagens e o histórico.
+    private static string Rotulo(StatusTarefa status) => status switch
+    {
+        StatusTarefa.ToDo => "A Fazer",
+        StatusTarefa.InProgress => "Em Andamento",
+        StatusTarefa.Review => "Em Revisão",
+        StatusTarefa.Done => "Concluída",
+        StatusTarefa.Bloqueada => "Bloqueada",
+        _ => status.ToString()
+    };
 
     private static string? LimparTexto(string? texto)
         => string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
@@ -113,12 +179,16 @@ public class TaskFlowService : ITaskFlowService
             return Resultado.Erro("Projeto não encontrado.");
 
         var projeto = _projetos[indice];
-        var tarefasRemovidas = _tarefas.Where(t => t.ProjetoId == id).ToList();
+        // Guarda a posição de cada tarefa para o undo devolvê-las no mesmo lugar.
+        var tarefasRemovidas = _tarefas
+            .Select((tarefa, posicao) => (Tarefa: tarefa, Posicao: posicao))
+            .Where(x => x.Tarefa.ProjetoId == id)
+            .ToList();
 
         // Dependências que envolvem essas tarefas saem junto (e voltam no undo)
         var dependenciasRemovidas = new List<Dependencia>();
-        foreach (var t in tarefasRemovidas)
-            dependenciasRemovidas.AddRange(_grafo.RemoverDependenciasTarefa(t.Id));
+        foreach (var (tarefa, _) in tarefasRemovidas)
+            dependenciasRemovidas.AddRange(_grafo.RemoverDependenciasTarefa(tarefa.Id));
 
         _tarefas.RemoveAll(t => t.ProjetoId == id);
         _projetos.RemoveAt(indice);
@@ -127,7 +197,9 @@ public class TaskFlowService : ITaskFlowService
             () =>
             {
                 _projetos.Insert(Math.Min(indice, _projetos.Count), projeto);
-                _tarefas.AddRange(tarefasRemovidas);
+                // Reinserir em ordem crescente de posição reconstrói a lista original.
+                foreach (var (tarefa, posicao) in tarefasRemovidas)
+                    _tarefas.Insert(Math.Min(posicao, _tarefas.Count), tarefa);
                 foreach (var d in dependenciasRemovidas)
                     _grafo.AdicionarDependencia(d.TarefaId, d.TarefaDependenciaId);
             });
@@ -224,10 +296,10 @@ public class TaskFlowService : ITaskFlowService
         var anterior = tarefa.Status;
         tarefa.Status = novoStatus;
 
-        Registrar("MudarStatus", $"Tarefa #{id} movida de '{anterior}' para '{novoStatus}'", "Tarefa", id,
+        Registrar("MudarStatus", $"Tarefa #{id} movida de '{Rotulo(anterior)}' para '{Rotulo(novoStatus)}'", "Tarefa", id,
             () => tarefa.Status = anterior);
 
-        return Resultado.Ok($"Tarefa #{id} movida para '{novoStatus}'.");
+        return Resultado.Ok($"Tarefa #{id} movida para '{Rotulo(novoStatus)}'.");
     }
 
     public Resultado RemoverTarefa(int id)
@@ -299,6 +371,12 @@ public class TaskFlowService : ITaskFlowService
     }
 
     public IReadOnlyList<int> ObterPredecessores(int tarefaId) => _grafo.ObterPredecessores(tarefaId);
+
+    // Mesma regra do GrafoDependencias.PodeIniciar: predecessora inexistente ou não concluída trava.
+    public IReadOnlyList<int> ObterPredecessorasPendentes(int tarefaId)
+        => _grafo.ObterPredecessores(tarefaId)
+                 .Where(p => ObterTarefa(p)?.Status != StatusTarefa.Done)
+                 .ToList();
 
     public IReadOnlyList<int> ObterOrdemExecucao(int? projetoId)
     {
@@ -425,7 +503,7 @@ public class TaskFlowService : ITaskFlowService
         var anterior = _salario;
         _salario = valor;
 
-        Registrar("Editar", $"Salário alterado de {anterior:C} para {valor:C}", "Salario", null,
+        Registrar("Editar", $"Salário alterado de {Moeda(anterior)} para {Moeda(valor)}", "Salario", null,
             () => _salario = anterior);
 
         return Resultado.Ok("Salário atualizado.");
@@ -444,7 +522,9 @@ public class TaskFlowService : ITaskFlowService
 
     public decimal ObterSaldoLivre() => _salario - ObterTotalAPagar();
 
-    public decimal ObterSaldoAposQuitarTudo() => _salario - ObterTotalContas();    public IReadOnlyList<TarefaFinanceira> ObterContasAtrasadas()
+    public decimal ObterSaldoAposQuitarTudo() => _salario - ObterTotalContas();
+
+    public IReadOnlyList<TarefaFinanceira> ObterContasAtrasadas()
     {
         SincronizarAtrasos();
         return _contas.Where(c => c.Status == StatusFinanceiro.Atrasada).ToList();
@@ -473,13 +553,23 @@ public class TaskFlowService : ITaskFlowService
 
     public Resultado DesfazerUltimaAcao()
     {
-        var acao = _undo.Desempilhar();
+        // Olha antes de tirar: ações carregadas do banco não têm como ser desfeitas
+        // e precisam continuar no histórico (antes eram descartadas sem desfazer nada).
+        var acao = _undo.OlharTopo();
         if (acao == null)
             return Resultado.Erro("Não há nenhuma ação para desfazer.");
         if (acao.Desfazer == null)
-            return Resultado.Erro("Essa ação não pode ser desfeita.");
+            return Resultado.Erro("Essa ação é de uma sessão anterior e não pode mais ser desfeita.");
 
+        _undo.Desempilhar();
         acao.Desfazer();
+        Persistir();
         return Resultado.Ok($"Desfeito: {acao.Descricao}");
+    }
+
+    public void LimparHistorico()
+    {
+        _undo.Limpar();
+        Persistir();
     }
 }

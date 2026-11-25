@@ -8,6 +8,6 @@ public class HistoricoAcao
     public string Descricao { get; set; } = string.Empty;  //Ex: "Tarefa 'Estudar C# ' criada"
     public string? EntidadeAfetada {get; set; }            // Ex: "Tarefa", "projeto", "TarefaFinanceira"
     public int? EntidadeId {get; set; }                   // Id da tarefa/projeto afetado
-    public string? dadosAnteriores {get; set; }          // (opcional) para conseguir fazer Undo depois
+    public string? DadosAnteriores {get; set; }          // (opcional) para conseguir fazer Undo depois
     public Action? Desfazer { get; set; }               // Como reverter esta ação. Fica só em memória (não será persistido).
 }

@@ -1,15 +1,14 @@
 using System;
-using System.Globalization;
 using TaskFlow.App.Navigation;
 using TaskFlow.Application;
 using TaskFlow.Domain;
+using static TaskFlow.App.Views.Formatacao;
 using static TaskFlow.App.Views.Saida;
 
 namespace TaskFlow.App.Views
 {
     public class FinanceiroView
     {
-        private static readonly CultureInfo CulturaBr = CultureInfo.GetCultureInfo("pt-BR");
         private readonly ITaskFlowService _service;
 
         public FinanceiroView(ITaskFlowService service)
@@ -23,10 +22,8 @@ namespace TaskFlow.App.Views
 
             while (!voltar)
             {
-                try { Console.Clear(); } catch { }
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine(">>> PAINEL FINANCEIRO PESSOAL <<<\n");
-                Console.ResetColor();
+                LimparTela();
+                Titulo("PAINEL FINANCEIRO PESSOAL", ConsoleColor.Yellow);
 
                 Console.WriteLine($"Salário: {Moeda(_service.ObterSalario())}  |  " +
                                   $"Total de contas: {Moeda(_service.ObterTotalContas())}  |  " +
@@ -43,7 +40,7 @@ namespace TaskFlow.App.Views
                                             : c.Status == StatusFinanceiro.Atrasada ? ConsoleColor.Red
                                             : ConsoleColor.Yellow;
                     Console.WriteLine(string.Format("{0,-4} {1,-15} | {2,-14} | {3,-10} | {4,-8}",
-                        c.Id, c.Titulo, Moeda(c.Valor), Rotulo(c.Status), c.DataVencimento.ToString("dd/MM")));
+                        c.Id, Truncar(c.Titulo, 15), Moeda(c.Valor), StatusConta(c.Status), c.DataVencimento.ToString("dd/MM")));
                     Console.ResetColor();
                 }
 
@@ -65,6 +62,7 @@ namespace TaskFlow.App.Views
                     case "S": DefinirSalario(); break;
                     case "V":
                     case "":
+                    case null: // fim da entrada (Ctrl+Z ou entrada redirecionada)
                         voltar = true;
                         break;
                     default:
@@ -77,7 +75,7 @@ namespace TaskFlow.App.Views
 
         private void PagarConta()
         {
-            var id = EntradaUsuario.LerInteiro("ID da conta: ");
+            var id = EntradaUsuario.LerInteiro("ID da conta (Enter para cancelar): ");
             if (id == 0)
                 return;
 
@@ -139,15 +137,5 @@ namespace TaskFlow.App.Views
 
             MostrarResultado(_service.DefinirSalario(valor));
         }
-
-
-        private static string Moeda(decimal valor) => string.Format(CulturaBr, "{0:C}", valor);
-
-        private static string Rotulo(StatusFinanceiro status) => status switch
-        {
-            StatusFinanceiro.Paga => "Paga",
-            StatusFinanceiro.Atrasada => "Atrasada",
-            _ => "Pendente"
-        };
     }
 }

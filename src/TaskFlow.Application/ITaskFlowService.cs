@@ -60,6 +60,9 @@ public interface ITaskFlowService
     Resultado RemoverDependencia(int tarefaId, int tarefaDependenciaId);
     IReadOnlyList<int> ObterPredecessores(int tarefaId);
 
+    /// <summary>Predecessoras ainda não concluídas. Enquanto houver alguma, a tarefa está travada.</summary>
+    IReadOnlyList<int> ObterPredecessorasPendentes(int tarefaId);
+
     /// <summary>Ids das tarefas na ordem sugerida de execução (ordenação topológica).</summary>
     IReadOnlyList<int> ObterOrdemExecucao(int? projetoId = null);
 
@@ -98,4 +101,7 @@ public interface ITaskFlowService
     IReadOnlyList<HistoricoAcao> ListarHistorico();
     HistoricoAcao? ObterUltimaAcao();
     Resultado DesfazerUltimaAcao();
+
+    /// <summary>Esvazia o histórico (usado depois de carregar os dados de exemplo).</summary>
+    void LimparHistorico();
 }
