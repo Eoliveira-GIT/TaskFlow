@@ -1,15 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <ItemGroup>
-    <ProjectReference Include="..\TaskFlow.Application\TaskFlow.Application.csproj" />
-  </ItemGroup>
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
-  <!-- Remover o comentário abaixo quando a Pessoa A criar TaskFlow.Domain\TaskFlow.Domain.csproj -->
-  <!-- <ItemGroup>
-    <ProjectReference Include="..\TaskFlow.Domain\TaskFlow.Domain.csproj" />
-  </ItemGroup> -->
+  <ItemGroup>
+    <ProjectReference Include="..\TaskFlow.Application\TaskFlow.Application.csproj" />
+  </ItemGroup>
 </Project>
