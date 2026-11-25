@@ -1,4 +1,6 @@
 using System;
+using TaskFlow.Application;
+using TaskFlow.App.MockServices;
 using TaskFlow.App.Views;
 
 namespace TaskFlow.App.Navigation
@@ -6,6 +8,13 @@ namespace TaskFlow.App.Navigation
     public class MenuNavigator
     {
         private bool _emExecucao = true;
+        private readonly ITaskFlowService _service;
+
+        public MenuNavigator()
+        {
+            _service = new TaskFlowMockService();
+            MockDataStore.Inicializar();
+        }
 
         public void Iniciar()
         {
@@ -38,7 +47,8 @@ namespace TaskFlow.App.Navigation
             Console.WriteLine(" [3] ⚡ O que Fazer Agora? (Fila de Prioridade)");
             Console.WriteLine(" [4] 🔗 Grafo de Dependências");
             Console.WriteLine(" [5] 💰 Painel Financeiro Pessoal");
-            Console.WriteLine(" [6] ↩️  Desfazer Última Ação (Undo)");
+            Console.WriteLine(" [6] ↩️  Histórico e Desfazer Ação (Undo)");
+            Console.WriteLine(" [7] 👤 Minhas Tarefas (por responsável)");
             Console.WriteLine(" [0] 🚪 Sair");
         }
 
@@ -48,26 +58,27 @@ namespace TaskFlow.App.Navigation
             switch (opcao)
             {
                 case "1":
-                    DashboardView.Renderizar();
+                    _service.ObterDashboardResumo();
                     break;
                 case "2":
-                    KanbanView.Renderizar();
+                    _service.ListarProjetos();
                     break;
                 case "3":
-                    Console.WriteLine("--- TAREFAS PRONTAS (FILA DE PRIORIDADE) ---");
+                    _service.ExibirTarefasProntas();
                     Pausar();
                     break;
                 case "4":
-                    Console.WriteLine("--- MAPA DE DEPENDÊNCIAS (GRAFO) ---");
                     GrafoDependenciasView.Renderizar();
-                    Pausar();
                     break;
                 case "5":
-                    FinanceiroView.Renderizar();
+                    _service.ExibirPainelFinanceiro();
                     break;
                 case "6":
-                    Console.WriteLine("Desfazendo última ação via Pilha de Undo...");
+                    _service.DesfazerUltimaAcao();
                     Pausar();
+                    break;
+                case "7":
+                    MinhasTarefasView.Renderizar();
                     break;
                 case "0":
                     _emExecucao = false;
