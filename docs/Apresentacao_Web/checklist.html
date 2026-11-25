@@ -72,7 +72,8 @@
             <div class="check-section">
                 <h3>1.1.1 - Estrutura do Solution</h3>
                 <div class="check-item done">Criar projeto <code>TaskFlow.App</code> na solution <code>TaskFlow.sln</code></div>
-                <div class="check-item done">Referenciar <code>TaskFlow.Domain</code> (comentada até Domain ficar pronto)</div>
+                <div class="check-item done">Referenciar <code>TaskFlow.Application</code> (que referencia <code>TaskFlow.Domain</code>)</div>
+                <div class="check-item done">Estrutura reorganizada em <code>src/</code>, <code>tests/</code> e <code>docs/</code></div>
             </div>
 
             <div class="check-section">
@@ -80,20 +81,23 @@
                 <div class="check-item done">📁 <code>Views/</code> — Separar cada tela do sistema</div>
                 <div class="check-item done">📁 <code>Navigation/</code> — Gerenciador central de menus e rotas</div>
                 <div class="check-item done">📁 <code>MockServices/</code> — Simular chamadas ao backend</div>
-                <div class="check-item done">📁 <code>Services/</code> — Contratos de integração (interfaces)</div>
+                <div class="check-item done">📁 Contrato <code>ITaskFlowService</code> em <code>src/TaskFlow.Application/</code></div>
             </div>
 
             <div class="check-section">
                 <h3>1.1.3 - Arquivos Criados</h3>
                 <div class="check-item done">📄 <code>Program.cs</code> — Ponto de entrada da aplicação</div>
                 <div class="check-item done">📄 <code>TaskFlow.App.csproj</code> — Configuração do projeto .NET</div>
-                <div class="check-item done">📄 <code>Services/ITaskFlowService.cs</code> — Interface de contrato</div>
+                <div class="check-item done">📄 <code>src/TaskFlow.Application/ITaskFlowService.cs</code> — Interface de contrato</div>
                 <div class="check-item done">📄 <code>Navigation/MenuNavigator.cs</code> — Controlador de navegação</div>
                 <div class="check-item done">📄 <code>Views/DashboardView.cs</code> — Tela Dashboard</div>
+                <div class="check-item done">📄 <code>Views/ProjetosView.cs</code> — Tela de Projetos (finalização)</div>
                 <div class="check-item done">📄 <code>Views/KanbanView.cs</code> — Tela Kanban</div>
                 <div class="check-item done">📄 <code>Views/FinanceiroView.cs</code> — Tela Financeira</div>
                 <div class="check-item done">📄 <code>Views/GrafoDependenciasView.cs</code> — Tela Grafo</div>
                 <div class="check-item done">📄 <code>MockServices/TaskFlowMockService.cs</code> — Mock do serviço</div>
+                <div class="check-item done">📄 <code>MockServices/MockModels.cs</code> — Modelos em memória (finalização)</div>
+                <div class="check-item done">📄 <code>MockServices/MockDataStore.cs</code> — Store in-memory + undo (finalização)</div>
             </div>
 
             <div class="check-section">
