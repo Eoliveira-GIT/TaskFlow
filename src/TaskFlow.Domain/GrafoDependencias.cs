@@ -15,7 +15,7 @@ public class GrafoDependencias
             return false;
 
         
-        // Verificar se ja existe essa dependecia
+        // Verificar se ja existe essa dependência
         if(_dependencias.Any(d => d.TarefaId == tarefaId && d.TarefaDependenciaId == tarefaDependenciaId))
             return false;
 
@@ -39,7 +39,7 @@ public class GrafoDependencias
     // ================================
     private bool FormariaCiclo(int tarefaId, int tarefaDependenciaId)
     {
-        // Simular a adição e vereficar se consegue chegar de volta
+        // Simula a adição e verifica se a predecessora já depende (direta ou indiretamente) da tarefa
         var visitados = new HashSet<int>();
        return ExisteCaminho(tarefaId, tarefaDependenciaId, visitados);
     }
@@ -70,10 +70,10 @@ public class GrafoDependencias
     //========================================
     // 3. Obter predecessores de uma tarefa
     //========================================
-    public List<int> ObterPredecessores(int tarefraId)
+    public List<int> ObterPredecessores(int tarefaId)
     {
         return _dependencias
-            .Where(d => d.TarefaId == tarefraId)
+            .Where(d => d.TarefaId == tarefaId)
             .Select(d => d.TarefaDependenciaId)
             .ToList();
     }
@@ -117,13 +117,13 @@ public class GrafoDependencias
     {
         var resultado = new List<int>();
         var visitados = new HashSet<int>();
-        var emPrecessamento = new HashSet<int>();
+        var emProcessamento = new HashSet<int>();
 
         foreach (var tarefa in todasTarefas)
         {
             if (!visitados.Contains(tarefa.Id))
             {
-                if (!DfsTopologico(tarefa.Id, visitados, emProcessamento: emPrecessamento, resultado: resultado, todasTarefas: todasTarefas))
+                if (!DfsTopologico(tarefa.Id, visitados, emProcessamento, resultado, todasTarefas))
                 {
                     // Ciclo detectado (não deveria acontecer se AdicionarDependencia estiver correto)
                     return new List<int>();
@@ -182,16 +182,14 @@ public class GrafoDependencias
             d.TarefaId == tarefaId && d.TarefaDependenciaId == tarefaDependenciaId) > 0;
     }
 
-    /// Remover todas as ligações em que a tarefa aparece ( como dependencia ou como predecessora)
-    /// e devolve o que removeu, para o undo conseguir restaurar.
+    // Remove todas as ligações em que a tarefa aparece (como dependente ou como predecessora)
+    // e devolve o que removeu, para o undo conseguir restaurar.
     public List<Dependencia> RemoverDependenciasTarefa(int tarefaId)
     {
         var removidas = _dependencias
             .Where(d => d.TarefaId == tarefaId || d.TarefaDependenciaId == tarefaId)
             .ToList();
         _dependencias.RemoveAll(d => d.TarefaId == tarefaId || d.TarefaDependenciaId == tarefaId);
-        return removidas;   
+        return removidas;
     }
-
-    
 }

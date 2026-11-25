@@ -40,4 +40,7 @@ Console.WriteLine(string.Join(" → ", ordem));
 
 Console.WriteLine("\nTeste finalizado!");
 
-return GrafoDependenciasTestes.Executar();
+var falhasGrafo = GrafoDependenciasTestes.Executar();
+var falhasServico = TaskFlowServiceTestes.Executar();
+
+return falhasGrafo == 0 && falhasServico == 0 ? 0 : 1;

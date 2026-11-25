@@ -11,7 +11,7 @@ public class FilaPrioridade
         Ordenar();
     }
 
-    // Remover e retorna a tarefa de maior prioridade
+    // Remove e retorna a tarefa de maior prioridade
     public Tarefa? Desenfileirar()
     {
         if (_tarefas.Count == 0)
@@ -22,7 +22,7 @@ public class FilaPrioridade
         return tarefa;
     }
 
-    // Olha a proximo tarefa sem remover
+    // Olha a próxima tarefa sem remover
     public Tarefa? OlharProxima()
     {
         if (_tarefas.Count == 0)
@@ -31,13 +31,13 @@ public class FilaPrioridade
         return _tarefas[0];
     }
     
-    // Remover todas as tarevas ja ordenadas
+    // Retorna uma cópia de todas as tarefas, já ordenadas
     public List<Tarefa> ObterTodas()
     {
         return new List<Tarefa>(_tarefas);
     }
 
-    // Osdenar por Prioridade (menor numero = mais prioridade) e depois por Prazo
+    // Ordena por Prioridade (menor numero = mais prioridade) e depois por Prazo
     private void Ordenar()
     {
        _tarefas = _tarefas

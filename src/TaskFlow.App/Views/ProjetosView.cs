@@ -1,65 +1,70 @@
 using System;
 using System.Linq;
-using TaskFlow.App.MockServices;
 using TaskFlow.App.Navigation;
+using TaskFlow.Application;
+using TaskFlow.Domain;
+using static TaskFlow.App.Views.Formatacao;
+using static TaskFlow.App.Views.Saida;
 
 namespace TaskFlow.App.Views
 {
-    public static class ProjetosView
+    public class ProjetosView
     {
-        public static void Renderizar()
+        private readonly ITaskFlowService _service;
+
+        public ProjetosView(ITaskFlowService service)
         {
-            MockDataStore.Inicializar();
+            _service = service;
+        }
+
+        public void Renderizar()
+        {
             bool voltar = false;
 
             while (!voltar)
             {
-                try { Console.Clear(); } catch { }
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine(">>> PROJETOS CADASTRADOS <<<\n");
-                Console.ResetColor();
+                LimparTela();
+                Titulo("PROJETOS CADASTRADOS", ConsoleColor.Cyan);
 
-                Console.WriteLine(string.Format("  {0,-4} {1,-32} {2,-8} {3,-24} {4,-6}", "ID", "Projeto", "Tarefas", "Responsáveis", "Atras."));
-                Console.WriteLine(new string('-', 80));
-                foreach (var p in MockDataStore.Projetos)
+                Console.WriteLine(string.Format("  {0,-4} {1,-30} {2,-7} {3,-7} {4,-6} {5}",
+                    "ID", "Projeto", "Tarefas", "Concl.", "Atras.", "Responsáveis"));
+                Console.WriteLine("  " + new string('-', 84));
+
+                var projetos = _service.ListarProjetos();
+                if (projetos.Count == 0)
+                    Console.WriteLine("  (nenhum projeto cadastrado)");
+
+                foreach (var p in projetos)
                 {
-                    var tarefasDoProjeto = MockDataStore.Tarefas.Where(t => t.ProjetoId == p.Id).ToList();
-                    var qtd = tarefasDoProjeto.Count;
-                    var atrasadas = tarefasDoProjeto.Count(MockDataStore.TarefaAtrasada);
-                    var responsaveis = string.Join(", ", tarefasDoProjeto
+                    var tarefas = _service.ListarTarefas(p.Id);
+                    var concluidas = tarefas.Count(t => t.Status == StatusTarefa.Done);
+                    var atrasadas = tarefas.Count(Atrasada);
+                    var responsaveis = string.Join(", ", tarefas
                         .Where(t => !string.IsNullOrWhiteSpace(t.Responsavel))
                         .Select(t => t.Responsavel!)
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .OrderBy(r => r));
-                    if (string.IsNullOrWhiteSpace(responsaveis))
-                        responsaveis = "-";
 
                     Console.ForegroundColor = atrasadas > 0 ? ConsoleColor.Red : ConsoleColor.Gray;
-                    Console.WriteLine(string.Format("  {0,-4} {1,-32} {2,-8} {3,-24} {4,-6}",
-                        p.Id, Truncar(p.Nome, 32), qtd, Truncar(responsaveis, 24), atrasadas));
+                    Console.WriteLine(string.Format("  {0,-4} {1,-30} {2,-7} {3,-7} {4,-6} {5}",
+                        p.Id, Truncar(p.Nome, 30), tarefas.Count, concluidas, atrasadas,
+                        Truncar(responsaveis.Length == 0 ? "-" : responsaveis, 28)));
                     Console.ResetColor();
                 }
 
-                Console.WriteLine("\n[N] Novo Projeto | [A] Abrir Projeto | [E] Editar Projeto | [R] Remover Projeto | [V] Voltar");
+                Console.WriteLine("\n[N] Novo | [A] Abrir (Kanban) | [E] Editar | [R] Remover | [V] Voltar");
                 Console.Write("Comando: ");
                 var cmd = Console.ReadLine()?.Trim().ToUpper();
 
                 switch (cmd)
                 {
-                    case "N":
-                        CriarProjeto();
-                        break;
-                    case "A":
-                        AbrirProjeto();
-                        break;
-                    case "E":
-                        EditarProjeto();
-                        break;
-                    case "R":
-                        RemoverProjeto();
-                        break;
+                    case "N": CriarProjeto(); break;
+                    case "A": AbrirProjeto(); break;
+                    case "E": EditarProjeto(); break;
+                    case "R": RemoverProjeto(); break;
                     case "V":
                     case "":
+                    case null: // fim da entrada (Ctrl+Z ou entrada redirecionada)
                         voltar = true;
                         break;
                     default:
@@ -70,86 +75,63 @@ namespace TaskFlow.App.Views
             }
         }
 
-        private static void CriarProjeto()
+        private void CriarProjeto()
         {
             var nome = EntradaUsuario.LerTextoObrigatorio("Nome do novo projeto: ");
+            var descricao = EntradaUsuario.LerTextoOpcional("Descrição (Enter = sem descrição): ", string.Empty);
 
-            var projeto = MockDataStore.AdicionarProjeto(nome);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Projeto #{projeto.Id} '{projeto.Nome}' criado!");
-            Console.ResetColor();
-            Pausar();
+            MostrarResultado(_service.CriarProjeto(nome, descricao));
         }
 
-        private static void EditarProjeto()
+        private void EditarProjeto()
+        {
+            var projeto = LerProjeto();
+            if (projeto == null)
+                return;
+
+            var nome = EntradaUsuario.LerTextoOpcional($"Nome [{projeto.Nome}]: ", projeto.Nome);
+            var descricao = EntradaUsuario.LerTextoOpcionalOuLimpar(
+                $"Descrição [{projeto.Descricao ?? "-"}] (Enter mantém, '-' apaga): ", projeto.Descricao);
+
+            MostrarResultado(_service.EditarProjeto(projeto.Id, nome, descricao));
+        }
+
+        private void RemoverProjeto()
+        {
+            var projeto = LerProjeto();
+            if (projeto == null)
+                return;
+
+            var qtd = _service.ListarTarefas(projeto.Id).Count;
+            if (!EntradaUsuario.Confirmar($"Remover '{projeto.Nome}' e suas {qtd} tarefa(s)? (s/n): "))
+                return;
+
+            MostrarResultado(_service.RemoverProjeto(projeto.Id));
+        }
+
+        private void AbrirProjeto()
+        {
+            var projeto = LerProjeto();
+            if (projeto == null)
+                return;
+
+            new KanbanView(_service).Renderizar(projeto.Id);
+        }
+
+        // Pede o ID e devolve o projeto, ou null se o usuário cancelou ou o ID não existe.
+        private Projeto? LerProjeto()
         {
             var id = EntradaUsuario.LerInteiro("ID do projeto (Enter para cancelar): ");
             if (id == 0)
-                return;
+                return null;
 
-            var projeto = MockDataStore.ObterProjeto(id);
+            var projeto = _service.ObterProjeto(id);
             if (projeto == null)
             {
                 EntradaUsuario.Erro("Projeto não encontrado.");
                 Pausar();
-                return;
             }
-
-            var nome = EntradaUsuario.LerTextoOpcional($"Novo nome [{projeto.Nome}]: ", projeto.Nome);
-
-            MockDataStore.EditarProjeto(id, nome);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Projeto #{id} atualizado para '{nome}'.");
-            Console.ResetColor();
-            Pausar();
-        }
-
-        private static void RemoverProjeto()
-        {
-            var id = EntradaUsuario.LerInteiro("ID do projeto (Enter para cancelar): ");
-            if (id == 0)
-                return;
-
-            if (!MockDataStore.RemoverProjeto(id))
-            {
-                EntradaUsuario.Erro("Projeto não encontrado.");
-                Pausar();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Projeto #{id} removido com suas tarefas (use [6] para desfazer).");
-            Console.ResetColor();
-            Pausar();
-        }
-
-        private static void AbrirProjeto()
-        {
-            var id = EntradaUsuario.LerInteiro("ID do projeto (Enter para cancelar): ");
-            if (id == 0)
-                return;
-
-            if (MockDataStore.ObterProjeto(id) == null)
-            {
-                EntradaUsuario.Erro("Projeto não encontrado.");
-                Pausar();
-                return;
-            }
-
-            KanbanView.Renderizar(id);
-        }
-
-        private static string Truncar(string texto, int max)
-        {
-            if (texto.Length <= max)
-                return texto;
-            return texto.Substring(0, max - 1) + "…";
-        }
-
-        private static void Pausar()
-        {
-            Console.WriteLine("\nPressione Enter para continuar...");
-            Console.ReadLine();
+            return projeto;
         }
     }
 }

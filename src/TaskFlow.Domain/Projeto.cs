@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace TaskFlow.Domain;
 
 public class Projeto

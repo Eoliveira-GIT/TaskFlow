@@ -5,6 +5,11 @@ namespace TaskFlow.App.Navigation
 {
     public static class EntradaUsuario
     {
+        private static readonly CultureInfo CulturaBr = CultureInfo.GetCultureInfo("pt-BR");
+
+        // Aceita "05/03/2026" e também "5/3/2026".
+        private static readonly string[] FormatosData = { "dd/MM/yyyy", "d/M/yyyy" };
+
         public static void Erro(string mensagem)
         {
             Console.ForegroundColor = ConsoleColor.Red;
@@ -17,7 +22,11 @@ namespace TaskFlow.App.Navigation
             while (true)
             {
                 Console.Write(prompt);
-                var texto = Console.ReadLine()?.Trim();
+                var linha = Console.ReadLine();
+                if (linha == null) // fim da entrada: sem isso, o laço pediria o texto para sempre
+                    throw new EndOfStreamException("A entrada terminou antes de o texto ser digitado.");
+
+                var texto = linha.Trim();
                 if (!string.IsNullOrWhiteSpace(texto))
                     return texto;
 
@@ -54,12 +63,15 @@ namespace TaskFlow.App.Navigation
             while (true)
             {
                 Console.Write(prompt);
-                var texto = Console.ReadLine()?.Trim().Replace(',', '.');
+                var texto = Console.ReadLine()?.Trim();
 
                 if (string.IsNullOrWhiteSpace(texto))
                     return atual ?? 0m;
 
-                if (decimal.TryParse(texto, NumberStyles.Any, CultureInfo.InvariantCulture, out var valor) && valor > 0)
+                // Com vírgula, lê no padrão brasileiro ("1.500,00" = 1500).
+                // Sem vírgula, aceita ponto como decimal ("150.50" = 150,5).
+                var cultura = texto.Contains(',') ? CulturaBr : CultureInfo.InvariantCulture;
+                if (decimal.TryParse(texto, NumberStyles.Number, cultura, out var valor) && valor > 0)
                     return valor;
 
                 Erro("Valor inválido. Digite um número maior que zero.");
@@ -76,10 +88,61 @@ namespace TaskFlow.App.Navigation
                 if (string.IsNullOrWhiteSpace(texto))
                     return atual;
 
-                if (DateTime.TryParseExact(texto, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var data))
+                if (DateTime.TryParseExact(texto, FormatosData, CultureInfo.InvariantCulture, DateTimeStyles.None, out var data))
                     return data;
 
                 Erro("Data inválida. Use o formato dd/MM/aaaa (ou Enter para manter).");
+            }
+        }
+
+        // Enter mantém o valor atual; "-" apaga (devolve null).
+        public static string? LerTextoOpcionalOuLimpar(string prompt, string? atual)
+        {
+            Console.Write(prompt);
+            var texto = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrWhiteSpace(texto))
+                return atual;
+
+            return texto == "-" ? null : texto;
+        }
+
+        // Para prazos, que podem não existir: Enter mantém o atual, "-" deixa sem prazo.
+        public static DateTime? LerDataOpcional(string prompt, DateTime? atual)
+        {
+            while (true)
+            {
+                Console.Write(prompt);
+                var texto = Console.ReadLine()?.Trim();
+
+                if (string.IsNullOrWhiteSpace(texto))
+                    return atual;
+
+                if (texto == "-")
+                    return null;
+
+                if (DateTime.TryParseExact(texto, FormatosData, CultureInfo.InvariantCulture, DateTimeStyles.None, out var data))
+                    return data;
+
+                Erro("Data inválida. Use dd/MM/aaaa, Enter para manter ou '-' para ficar sem prazo.");
+            }
+        }
+
+        // Prioridade do Domain: 1 (urgente) a 5 (mínima). Enter mantém a atual.
+        public static int LerPrioridade(string prompt, int atual)
+        {
+            while (true)
+            {
+                Console.Write(prompt);
+                var texto = Console.ReadLine()?.Trim();
+
+                if (string.IsNullOrWhiteSpace(texto))
+                    return atual;
+
+                if (int.TryParse(texto, out var valor) && valor >= 1 && valor <= 5)
+                    return valor;
+
+                Erro("Prioridade inválida. Digite de 1 (urgente) a 5 (mínima).");
             }
         }
 
