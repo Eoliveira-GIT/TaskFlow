@@ -37,4 +37,9 @@ public class PilhaUndo
         _pilha.Clear();
     }
     
+    // Mais recente primeiro (e a ordem natural de enumeração de uma Stack)
+    public List<HistoricoAcao> ObterTodas() => _pilha.ToList();
+
+    /// Como reverter esta ação. Fica só em memória (não será persistido).
+    public Action? Desfazer { get; set; }
 }

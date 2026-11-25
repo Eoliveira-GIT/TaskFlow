@@ -175,4 +175,23 @@ public class GrafoDependencias
     {
         _dependencias.Clear();
     }
+
+    public bool RemoverDependencia(int tarefaId, int tarefaDependenciaId)
+    {
+        return _dependencias.RemoveAll(d =>
+            d.TarefaId == tarefaId && d.TarefaDependenciaId == tarefaDependenciaId) > 0;
+    }
+
+    /// Remover todas as ligações em que a tarefa aparece ( como dependencia ou como predecessora)
+    /// e devolve o que removeu, para o undo conseguir restaurar.
+    public List<Dependencia> RemoverDependenciasTarefa(int tarefaId)
+    {
+        var removidas = _dependencias
+            .Where(d => d.TarefaId == tarefaId || d.TarefaDependenciaId == tarefaId)
+            .ToList();
+        _dependencias.RemoveAll(d => d.TarefaId == tarefaId || d.TarefaDependenciaId == tarefaId);
+        return removidas;   
+    }
+
+    
 }
