@@ -76,8 +76,7 @@ namespace TaskFlow.App.Navigation
                     new FinanceiroView(_service).Renderizar();
                     break;
                 case "6":
-                    _mock.DesfazerUltimaAcao();
-                    Pausar();
+                    new HistoricoView(_service).Renderizar();
                     break;
                 case "7":
                     MinhasTarefasView.Renderizar();

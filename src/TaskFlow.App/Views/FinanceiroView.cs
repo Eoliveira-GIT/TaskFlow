@@ -3,6 +3,7 @@ using System.Globalization;
 using TaskFlow.App.Navigation;
 using TaskFlow.Application;
 using TaskFlow.Domain;
+using static TaskFlow.App.Views.Saida;
 
 namespace TaskFlow.App.Views
 {
@@ -139,21 +140,6 @@ namespace TaskFlow.App.Views
             MostrarResultado(_service.DefinirSalario(valor));
         }
 
-        // Todo comando termina igual: sucesso em verde, erro com a mensagem do serviço.
-        private static void MostrarResultado(Resultado resultado)
-        {
-            if (resultado.Sucesso)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"✓ {resultado.Mensagem}");
-                Console.ResetColor();
-            }
-            else
-            {
-                EntradaUsuario.Erro(resultado.Mensagem ?? "Não foi possível concluir a operação.");
-            }
-            Pausar();
-        }
 
         private static string Moeda(decimal valor) => string.Format(CulturaBr, "{0:C}", valor);
 
@@ -163,11 +149,5 @@ namespace TaskFlow.App.Views
             StatusFinanceiro.Atrasada => "Atrasada",
             _ => "Pendente"
         };
-
-        private static void Pausar()
-        {
-            Console.WriteLine("\nPressione Enter para continuar...");
-            Console.ReadLine();
-        }
     }
 }
