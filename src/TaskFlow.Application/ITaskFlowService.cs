@@ -82,12 +82,16 @@ public interface ITaskFlowService
     /// </summary>
     decimal ObterSaldoLivre();
 
+    /// <summary>Soma das despesas (pagas ou não).</summary>
+    decimal ObterTotalContas();
+    /// <summary>Soma das despesas ainda não pagas.</summary>
+    decimal ObterTotalAPagar();
+    /// <summary>Salário menos todas as despesas.</summary>
+    decimal ObterSaldoAposQuitarTudo();
+
     /// <summary>Contas não pagas com vencimento anterior a hoje.</summary>
     IReadOnlyList<TarefaFinanceira> ObterContasAtrasadas();
-
-    /// <summary>Contas não pagas que vencem nos próximos <paramref name="dias"/> dias.</summary>
-    IReadOnlyList<TarefaFinanceira> ObterContasProximasVencimento(int dias = 7);
-
+    
     // =====================
     // HISTÓRICO / UNDO
     // =====================

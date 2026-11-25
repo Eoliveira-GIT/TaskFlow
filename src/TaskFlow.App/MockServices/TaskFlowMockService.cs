@@ -5,7 +5,7 @@ using TaskFlow.App.Views;
 
 namespace TaskFlow.App.MockServices
 {
-    public class TaskFlowMockService : ITaskFlowService
+    public class TaskFlowMockService 
     {
         public void ObterDashboardResumo()
         {
@@ -90,11 +90,6 @@ namespace TaskFlow.App.MockServices
             {
                 Console.WriteLine("Voltando...");
             }
-        }
-
-        public void ExibirPainelFinanceiro()
-        {
-            FinanceiroView.Renderizar();
         }
     }
 }
