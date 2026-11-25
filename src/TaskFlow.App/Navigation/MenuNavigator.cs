@@ -9,10 +9,12 @@ namespace TaskFlow.App.Navigation
     {
         private bool _emExecucao = true;
         private readonly ITaskFlowService _service;
+        private readonly TaskFlowMockService _mock;
 
         public MenuNavigator()
         {
-            _service = new TaskFlowMockService();
+            _service = new TaskFlowService();
+            _mock = new TaskFlowMockService();
             MockDataStore.Inicializar();
         }
 
@@ -58,23 +60,23 @@ namespace TaskFlow.App.Navigation
             switch (opcao)
             {
                 case "1":
-                    _service.ObterDashboardResumo();
+                    _mock.ObterDashboardResumo();
                     break;
                 case "2":
-                    _service.ListarProjetos();
+                    _mock.ListarProjetos();
                     break;
                 case "3":
-                    _service.ExibirTarefasProntas();
+                    _mock.ExibirTarefasProntas();
                     Pausar();
                     break;
                 case "4":
                     GrafoDependenciasView.Renderizar();
                     break;
                 case "5":
-                    _service.ExibirPainelFinanceiro();
+                    new FinanceiroView(_service).Renderizar();
                     break;
                 case "6":
-                    _service.DesfazerUltimaAcao();
+                    _mock.DesfazerUltimaAcao();
                     Pausar();
                     break;
                 case "7":

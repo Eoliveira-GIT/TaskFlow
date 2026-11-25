@@ -1,15 +1,23 @@
 using System;
-using System.Linq;
-using TaskFlow.App.MockServices;
+using System.Globalization;
 using TaskFlow.App.Navigation;
+using TaskFlow.Application;
+using TaskFlow.Domain;
 
 namespace TaskFlow.App.Views
 {
-    public static class FinanceiroView
+    public class FinanceiroView
     {
-        public static void Renderizar()
+        private static readonly CultureInfo CulturaBr = CultureInfo.GetCultureInfo("pt-BR");
+        private readonly ITaskFlowService _service;
+
+        public FinanceiroView(ITaskFlowService service)
         {
-            MockDataStore.Inicializar();
+            _service = service;
+        }
+
+        public void Renderizar()
+        {
             bool voltar = false;
 
             while (!voltar)
@@ -19,29 +27,28 @@ namespace TaskFlow.App.Views
                 Console.WriteLine(">>> PAINEL FINANCEIRO PESSOAL <<<\n");
                 Console.ResetColor();
 
-                Console.WriteLine($"Salário: {MockDataStore.FormatarMoeda(MockDataStore.Salario)}  |  " +
-                                  $"Total de contas: {MockDataStore.FormatarMoeda(MockDataStore.TotalContas())}  |  " +
-                                  $"A pagar: {MockDataStore.FormatarMoeda(MockDataStore.TotalAPagar())}");
-                Console.WriteLine($"Saldo livre (salário - a pagar): {MockDataStore.FormatarMoeda(MockDataStore.SaldoLivre())}  |  " +
-                                  $"Saldo após quitar tudo: {MockDataStore.FormatarMoeda(MockDataStore.SaldoAposQuitarTudo())}");
+                Console.WriteLine($"Salário: {Moeda(_service.ObterSalario())}  |  " +
+                                  $"Total de contas: {Moeda(_service.ObterTotalContas())}  |  " +
+                                  $"A pagar: {Moeda(_service.ObterTotalAPagar())}");
+                Console.WriteLine($"Saldo livre (salário - a pagar): {Moeda(_service.ObterSaldoLivre())}  |  " +
+                                  $"Saldo após quitar tudo: {Moeda(_service.ObterSaldoAposQuitarTudo())}");
                 Console.WriteLine();
 
                 Console.WriteLine(string.Format("{0,-4} {1,-15} | {2,-14} | {3,-10} | {4,-8}", "ID", "Descrição", "Valor", "Status", "Venc."));
                 Console.WriteLine(new string('-', 60));
-                foreach (var c in MockDataStore.Contas)
+                foreach (var c in _service.ListarContas())
                 {
-                    Console.ForegroundColor = c.Status == StatusContaMock.Paga ? ConsoleColor.Green
-                                            : c.Status == StatusContaMock.Atrasada ? ConsoleColor.Red
+                    Console.ForegroundColor = c.Status == StatusFinanceiro.Paga ? ConsoleColor.Green
+                                            : c.Status == StatusFinanceiro.Atrasada ? ConsoleColor.Red
                                             : ConsoleColor.Yellow;
                     Console.WriteLine(string.Format("{0,-4} {1,-15} | {2,-14} | {3,-10} | {4,-8}",
-                        c.Id, c.Descricao, MockDataStore.FormatarMoeda(c.Valor),
-                        MockDataStore.RotuloStatusConta(c.Status), c.Vencimento.ToString("dd/MM")));
+                        c.Id, c.Titulo, Moeda(c.Valor), Rotulo(c.Status), c.DataVencimento.ToString("dd/MM")));
                     Console.ResetColor();
                 }
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"\nA pagar: {MockDataStore.FormatarMoeda(MockDataStore.TotalAPagar())}  |  " +
-                                  $"Atrasadas: {MockDataStore.ContasAtrasadas()}");
+                Console.WriteLine($"\nA pagar: {Moeda(_service.ObterTotalAPagar())}  |  " +
+                                  $"Atrasadas: {_service.ObterContasAtrasadas().Count}");
                 Console.ResetColor();
 
                 Console.WriteLine("\n[A] Pagar Conta | [N] Nova Conta | [E] Editar Conta | [R] Remover Conta | [S] Salário | [V] Voltar");
@@ -50,21 +57,11 @@ namespace TaskFlow.App.Views
 
                 switch (cmd)
                 {
-                    case "A":
-                        PagarConta();
-                        break;
-                    case "N":
-                        NovaConta();
-                        break;
-                    case "E":
-                        EditarConta();
-                        break;
-                    case "R":
-                        RemoverConta();
-                        break;
-                    case "S":
-                        DefinirSalario();
-                        break;
+                    case "A": PagarConta(); break;
+                    case "N": NovaConta(); break;
+                    case "E": EditarConta(); break;
+                    case "R": RemoverConta(); break;
+                    case "S": DefinirSalario(); break;
                     case "V":
                     case "":
                         voltar = true;
@@ -77,28 +74,18 @@ namespace TaskFlow.App.Views
             }
         }
 
-        private static void PagarConta()
+        private void PagarConta()
         {
             var id = EntradaUsuario.LerInteiro("ID da conta: ");
             if (id == 0)
                 return;
 
-            if (!MockDataStore.PagarConta(id))
-            {
-                EntradaUsuario.Erro("Conta não encontrada.");
-                Pausar();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Conta #{id} marcada como Paga.");
-            Console.ResetColor();
-            Pausar();
+            MostrarResultado(_service.PagarConta(id));
         }
 
-        private static void NovaConta()
+        private void NovaConta()
         {
-            var descricao = EntradaUsuario.LerTextoObrigatorio("Descrição da conta: ");
+            var titulo = EntradaUsuario.LerTextoObrigatorio("Descrição da conta: ");
 
             var valor = EntradaUsuario.LerDecimal("Valor (ex: 150,00, Enter para cancelar): ", null);
             if (valor == 0m)
@@ -106,20 +93,18 @@ namespace TaskFlow.App.Views
 
             var vencimento = EntradaUsuario.LerData("Vencimento (dd/MM/aaaa, Enter = hoje): ", DateTime.Today);
 
-            var conta = MockDataStore.AdicionarConta(descricao, valor, vencimento);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Conta #{conta.Id} '{conta.Descricao}' criada ({MockDataStore.FormatarMoeda(conta.Valor)}).");
-            Console.ResetColor();
-            Pausar();
+            // Esta tela só cria contas a pagar, então o tipo é fixo.
+            MostrarResultado(_service.CriarConta(titulo, valor, vencimento, TipoFinanceiro.Despesa));
         }
 
-        private static void EditarConta()
+        private void EditarConta()
         {
             var id = EntradaUsuario.LerInteiro("ID da conta (Enter para cancelar): ");
             if (id == 0)
                 return;
 
-            var conta = MockDataStore.Contas.FirstOrDefault(c => c.Id == id);
+            // Buscamos antes só para mostrar os valores atuais como padrão.
+            var conta = _service.ObterConta(id);
             if (conta == null)
             {
                 EntradaUsuario.Erro("Conta não encontrada.");
@@ -127,50 +112,57 @@ namespace TaskFlow.App.Views
                 return;
             }
 
-            var descricao = EntradaUsuario.LerTextoOpcional($"Descrição [{conta.Descricao}]: ", conta.Descricao);
-            var valor = EntradaUsuario.LerDecimal($"Valor (atual {MockDataStore.FormatarMoeda(conta.Valor)}, Enter mantém): ", conta.Valor);
-            var vencimento = EntradaUsuario.LerData($"Vencimento (atual {conta.Vencimento:dd/MM/yyyy}, Enter mantém): ", conta.Vencimento);
+            var titulo = EntradaUsuario.LerTextoOpcional($"Descrição [{conta.Titulo}]: ", conta.Titulo);
+            var valor = EntradaUsuario.LerDecimal($"Valor (atual {Moeda(conta.Valor)}, Enter mantém): ", conta.Valor);
+            var vencimento = EntradaUsuario.LerData($"Vencimento (atual {conta.DataVencimento:dd/MM/yyyy}, Enter mantém): ", conta.DataVencimento);
 
-            MockDataStore.EditarConta(id, descricao, valor, vencimento);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Conta #{id} atualizada.");
-            Console.ResetColor();
-            Pausar();
+            MostrarResultado(_service.EditarConta(id, titulo, valor, vencimento));
         }
 
-        private static void RemoverConta()
+        private void RemoverConta()
         {
             var id = EntradaUsuario.LerInteiro("ID da conta (Enter para cancelar): ");
             if (id == 0)
                 return;
 
-            if (!MockDataStore.RemoverConta(id))
-            {
-                EntradaUsuario.Erro("Conta não encontrada.");
-                Pausar();
-                return;
-            }
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Conta #{id} removida (use [6] para desfazer).");
-            Console.ResetColor();
-            Pausar();
+            MostrarResultado(_service.RemoverConta(id));
         }
 
-        private static void DefinirSalario()
+        private void DefinirSalario()
         {
             var valor = EntradaUsuario.LerDecimal(
-                $"Novo salário mensal (atual {MockDataStore.FormatarMoeda(MockDataStore.Salario)}, Enter para cancelar): ",
+                $"Novo salário mensal (atual {Moeda(_service.ObterSalario())}, Enter para cancelar): ",
                 null);
             if (valor == 0m)
                 return;
 
-            MockDataStore.DefinirSalario(valor);
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✓ Salário atualizado para {MockDataStore.FormatarMoeda(valor)}.");
-            Console.ResetColor();
+            MostrarResultado(_service.DefinirSalario(valor));
+        }
+
+        // Todo comando termina igual: sucesso em verde, erro com a mensagem do serviço.
+        private static void MostrarResultado(Resultado resultado)
+        {
+            if (resultado.Sucesso)
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"✓ {resultado.Mensagem}");
+                Console.ResetColor();
+            }
+            else
+            {
+                EntradaUsuario.Erro(resultado.Mensagem ?? "Não foi possível concluir a operação.");
+            }
             Pausar();
         }
+
+        private static string Moeda(decimal valor) => string.Format(CulturaBr, "{0:C}", valor);
+
+        private static string Rotulo(StatusFinanceiro status) => status switch
+        {
+            StatusFinanceiro.Paga => "Paga",
+            StatusFinanceiro.Atrasada => "Atrasada",
+            _ => "Pendente"
+        };
 
         private static void Pausar()
         {

@@ -435,12 +435,16 @@ public class TaskFlowService : ITaskFlowService
 
     // Regra adotada: salário menos as DESPESAS ainda não pagas (receitas não entram).
     // Não filtra por mês. Se quiserem, é só mudar aqui, num lugar só.
-    public decimal ObterSaldoLivre()
-        => _salario - _contas
-            .Where(c => c.Tipo == TipoFinanceiro.Despesa && c.Status != StatusFinanceiro.Paga)
-            .Sum(c => c.Valor);
+    public decimal ObterTotalContas()
+    => _contas.Where(c => c.Tipo == TipoFinanceiro.Despesa).Sum(c => c.Valor);
 
-    public IReadOnlyList<TarefaFinanceira> ObterContasAtrasadas()
+    public decimal ObterTotalAPagar()
+    => _contas.Where(c => c.Tipo == TipoFinanceiro.Despesa && c.Status != StatusFinanceiro.Paga)
+              .Sum(c => c.Valor);
+
+    public decimal ObterSaldoLivre() => _salario - ObterTotalAPagar();
+
+    public decimal ObterSaldoAposQuitarTudo() => _salario - ObterTotalContas();    public IReadOnlyList<TarefaFinanceira> ObterContasAtrasadas()
     {
         SincronizarAtrasos();
         return _contas.Where(c => c.Status == StatusFinanceiro.Atrasada).ToList();
